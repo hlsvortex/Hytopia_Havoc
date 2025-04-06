@@ -189,11 +189,9 @@ export class GateCrashLevelController extends LevelController {
         }
         this.obstacles = [];
         
-        // Clear map data by loading an empty map
-        if (this.world) {
-            console.log(`[GateCrash] Clearing map data`);
-            this.world.loadMap({ blocks: {} });
-        }
+        // Call the base class cleanup to handle map clearing correctly
+        console.log(`[GateCrash] Calling base class cleanup for block clearing`);
+        super.cleanup();
         
         console.log(`[GateCrash] Cleanup complete`);
     }

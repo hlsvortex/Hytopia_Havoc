@@ -57,7 +57,10 @@ export abstract class LevelController {
         try {
             // Clear any existing map blocks first to avoid overlap
             console.log(`[LevelController] Clearing existing map before loading new one`);
-            this.cleanup();
+            if (this.world) {
+                this.world.loadMap({ blocks: {} });
+                console.log(`[LevelController] Cleared existing map with empty map`);
+            }
 
             // Resolve the absolute path to the file
             const resolvedPath = path.resolve(process.cwd(), mapPath);
@@ -115,22 +118,60 @@ export abstract class LevelController {
      * This is called when switching between levels or shutting down the level
      */
     public cleanup(): void {
-        console.log(`[LevelController] Base cleanup for ${this.getLevelName()}`);
+        console.log(`[LevelController] *** CLEANUP CALLED for ${this.getLevelName()} ***`);
         
-        // Clear all blocks by loading an empty map
+        // Clear all blocks by directly setting them to 0 (air)
         try {
-            if (this.world) {
-                console.log(`[LevelController] Clearing all blocks by loading empty map`);
-                // The most efficient way to clear all blocks is to load an empty map
+            if (this.world && this.currentMapData && this.currentMapData.blocks) {
+                const blocks = this.currentMapData.blocks;
+                let blockCount = 0;
+                
+                console.log(`[LevelController] Starting block cleanup - found ${Object.keys(blocks).length} blocks to clear`);
+                
+                // Iterate through all blocks in the map and set them to 0 (air)
+                for (const blockKey in blocks) {
+                    if (Object.prototype.hasOwnProperty.call(blocks, blockKey)) {
+                        // Parse the block coordinates from the key (format: "x,y,z")
+                        const coords = blockKey.split(',').map(Number);
+                        if (coords.length === 3) {
+                            const [x, y, z] = coords;
+                            // Set the block to air (0)
+                            this.world.chunkLattice.setBlock({x, y, z}, 0);
+                            blockCount++;
+                            
+                            // Log every 100 blocks for progress tracking
+                            if (blockCount % 100 === 0) {
+                                console.log(`[LevelController] Cleared ${blockCount}/${Object.keys(blocks).length} blocks...`);
+                            }
+                        }
+                    }
+                }
+
+				this.world.chunkLattice.getAllChunks().forEach(chunk => {
+					chunk.despawn();
+				});
+                
+                console.log(`[LevelController] COMPLETED block cleanup - cleared ${blockCount} blocks by setting to air`);
+                
+                // Force a visual refresh by loading an empty map immediately after
+                console.log(`[LevelController] Forcing visual refresh with empty map load`);
                 this.world.loadMap({ blocks: {} });
-                console.log(`[LevelController] Successfully cleared all blocks`);
+            } else {
+                // Attempt to load empty map as fallback if no current map data
+                if (this.world) {
+                    console.log(`[LevelController] No map data found, attempting to clear with empty map`);
+                    this.world.loadMap({ blocks: {} });
+                }
             }
+            
+          
         } catch (error) {
             console.error(`[LevelController] Error clearing blocks:`, error);
         }
         
         // Clear current map data
         this.currentMapData = null;
+        console.log(`[LevelController] *** CLEANUP COMPLETE for ${this.getLevelName()} ***`);
     }
     
     abstract startRound(players: Player[]): void;

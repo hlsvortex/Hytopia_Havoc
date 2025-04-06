@@ -197,11 +197,9 @@ export class SeesawLevelController extends LevelController {
 			this.seesaws = [];
 		}
 		
-		// Clear map data by loading an empty map
-		if (this.world) {
-			console.log(`[SeesawLevelController] Clearing map data`);
-			this.world.loadMap({ blocks: {} });
-		}
+		// Call the base class cleanup to handle map clearing correctly
+		console.log(`[SeesawLevelController] Calling base class cleanup for block clearing`);
+		super.cleanup();
 		
 		console.log(`[SeesawLevelController] Cleanup complete`);
 	}

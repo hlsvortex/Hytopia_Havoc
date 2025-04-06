@@ -108,14 +108,14 @@ startServer(world => {
 	});
 	
 	// Command to manually reload the default level if needed
-	world.chatManager.registerCommand("/reloadlevel", (player, args) => {
+	world.chatManager.registerCommand("/loadlevel", (player, args) => {
 		// Get the level ID from args or default to seesaw
 		const levelId = args[0] || "seesaw";
 		
 		console.log(`[Server] Player ${player.id} requested to load level: ${levelId}`);
 		
 		// First reset the world to clear everything
-		world.loadMap({ blocks: {} }); 
+		//world.loadMap({ blocks: {} }); 
 		
 		// Then activate the requested level
 		if (levelManager.activateLevel(levelId)) {

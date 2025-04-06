@@ -1,0 +1,6 @@
+export const MenuType = {
+	CHARACTER_SELECT: 'CHARACTER_SELECT',
+    HUD: 'HUD',
+    MATCH_STATS: 'MATCH_STATS',
+    ROUND_WINNER: 'ROUND_WINNER',
+}; 

@@ -1,0 +1,227 @@
+// Placeholder for GateCrashLevelController
+import { World, PlayerEntity, Entity, type Vector3Like, Player } from 'hytopia';
+import { LevelController } from '../core/LevelController';
+import { CrashWallObstacle, type CrashWallObstacleOptions } from '../obsticals/CrashWallObstacle';
+import { type LevelConfiguration } from '../config/LevelConfiguration';
+
+/**
+ * Specialized level controller for gate crash obstacle course levels
+ */
+export class GateCrashLevelController extends LevelController {
+    private obstacles: CrashWallObstacle[] = [];
+    private difficulty: 'easy' | 'medium' | 'hard' = 'medium';
+    private courseStartZ: number = 15;
+    private obstacleSpacing: number = 8;
+    private courseWidth: number = 16;
+    private wallThickness: number = 0.5;
+    private wallHeight: number = 4;
+    private wallWidth: number = 3;
+
+    /**
+     * Create a new gate crash level controller
+     * @param world Game world
+     * @param config Level configuration
+     */
+    constructor(world: World, config: LevelConfiguration) {
+        super(world, config);
+        this.difficulty = config.difficulty || 'medium';
+        console.log(`Created gate crash level with ${this.difficulty} difficulty`);
+        
+        // Don't create the course automatically - wait for explicit activation
+    }
+    
+    /**
+     * Activate this level - load the map and create obstacles
+     */
+    public activate(): void {
+        console.log(`[GateCrashLevelController] Activating level`);
+        this.createCourse();
+    }
+    
+    /**
+     * Create the course layout with CrashWallObstacles
+     */
+    protected createCourse(): void {
+        console.log(`[GateCrash] Creating course with ${this.difficulty} difficulty...`);
+        
+        // First ensure map is loaded before adding obstacles
+        this.loadMap();
+        
+        const rows = 5;
+        const wallsPerRow = 4;
+
+        // First wall with 1 second delay - small size
+        const wallOptions = {
+            startDelay: 1000,
+            moveDistance: 3,
+            moveSpeed: 1,
+            waitTime: 1000,
+            size: 'small' as const
+        };
+
+        // Second wall with longer delay - medium size
+        const wallOptions2 = {
+            startDelay: 5000,
+            moveDistance: 3,
+            moveSpeed: 1,
+            waitTime: 1000,
+            size: 'medium' as const
+        };
+        
+		const startDepth = 25;
+		const baseOffsetX = 1;
+		const baseOffsetY = 2;
+		const depthAmount = 11;
+
+		this.addCrashWall({ x: baseOffsetX - 9, y: baseOffsetY, z: startDepth }, wallOptions, 'large');
+		this.addCrashWall({ x: baseOffsetX, y: baseOffsetY, z: startDepth }, wallOptions2, 'large');
+		this.addCrashWall({ x: baseOffsetX + 9, y: baseOffsetY, z: startDepth }, wallOptions, 'large');
+
+		let depthIndex = 2;
+
+		// section 2
+		this.addCrashWall({ x: baseOffsetX - 10.5, y: baseOffsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions, 'medium');
+		this.addCrashWall({ x: baseOffsetX - 3.5, y: baseOffsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions2, 'medium');
+		this.addCrashWall({ x: baseOffsetX + 3.5, y: baseOffsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions, 'medium');
+		this.addCrashWall({ x: baseOffsetX + 10.5, y: baseOffsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions2, 'medium');
+
+		depthIndex = 4;
+
+		let offsetY = 3;
+		// section 2
+		this.addCrashWall({ x: baseOffsetX - 9, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions2, 'large');
+		this.addCrashWall({ x: baseOffsetX + 9, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions, 'large');
+
+		depthIndex = 6;
+
+		// section 2
+		this.addCrashWall({ x: baseOffsetX - 10.5, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions, 'medium');
+		this.addCrashWall({ x: baseOffsetX - 3.5, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions2, 'medium');
+		this.addCrashWall({ x: baseOffsetX + 3.5, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions, 'medium');
+		this.addCrashWall({ x: baseOffsetX + 10.5, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions2, 'medium');
+
+		depthIndex = 8;
+		offsetY = 5;
+
+		// section 3
+		this.addCrashWall({ x: baseOffsetX - 5, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions2, 'small');
+		this.addCrashWall({ x: baseOffsetX - 8.5, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions, 'small');
+		this.addCrashWall({ x: baseOffsetX - 12, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions2, 'small');
+
+		this.addCrashWall({ x: baseOffsetX + 5, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions, 'small');
+		this.addCrashWall({ x: baseOffsetX + 8.5, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions2, 'small');
+		this.addCrashWall({ x: baseOffsetX + 12, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions, 'small');
+
+		// section 4
+		depthIndex = 10;
+		offsetY = 7;
+
+		this.addCrashWall({ x: baseOffsetX - 7.5, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions2, 'small');
+		this.addCrashWall({ x: baseOffsetX - 3.5, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions, 'small');
+		this.addCrashWall({ x: baseOffsetX, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions2, 'small');
+		this.addCrashWall({ x: baseOffsetX + 3.5, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions, 'small');
+		this.addCrashWall({ x: baseOffsetX + 7.5, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions2, 'small');
+
+		//end section
+		depthIndex = 11;
+		offsetY = 5;
+		this.addCrashWall({ x: baseOffsetX - 6, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions2, 'medium');
+		this.addCrashWall({ x: baseOffsetX, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions, 'medium');
+		this.addCrashWall({ x: baseOffsetX + 6, y: baseOffsetY + offsetY, z: startDepth + (depthIndex * depthAmount) }, wallOptions2, 'medium');
+
+
+        console.log(`[GateCrash] Course creation complete with ${this.obstacles.length} walls.`);
+    }
+
+    private calculateWallPositions(count: number, width: number, z: number): Vector3Like[] {
+        const positions: Vector3Like[] = [];
+        const totalWallWidth = count * this.wallWidth;
+        const totalGapWidth = width - totalWallWidth;
+        const gapSize = totalGapWidth / (count + 1);
+        
+        let currentX = -width / 2 + gapSize + this.wallWidth / 2;
+
+        for (let i = 0; i < count; i++) {
+            positions.push({ x: currentX, y: this.wallHeight / 2, z: z });
+            currentX += this.wallWidth + gapSize;
+        }
+        return positions;
+    }
+
+    private addCrashWall(position: Vector3Like, options: CrashWallObstacleOptions = {}, size?: 'small' | 'medium' | 'large'): void {
+        // If size is provided, override the options.size
+        const finalOptions = { ...options };
+        if (size) {
+            finalOptions.size = size;
+        }
+        
+        const wall = new CrashWallObstacle(finalOptions);
+        wall.spawn(this.world, position);
+        this.obstacles.push(wall);
+    }
+
+    public resetCourse(): void {
+        console.log('[GateCrash] Resetting course obstacles...');
+        for (const obstacle of this.obstacles) {
+            obstacle.resetState();
+        }
+    }
+
+    public startRound(players: Player[]): void {
+        this.resetCourse();
+        console.log(`[GateCrash] Round started with ${players.length} players`);
+        
+        // Trigger round end after a delay (temporary)
+        setTimeout(() => {
+            const qualified = players.map(p => p.id);
+            const eliminated: string[] = [];
+            this.events.emit('RoundEnd', { q: qualified, e: eliminated });
+        }, 60000); // 1 minute round
+    }
+    
+    public cleanup(): void {
+        console.log('[GateCrash] Cleaning up Gate Crash level...');
+        for (const obstacle of this.obstacles) {
+            obstacle.stopMovement();
+            if (obstacle.isSpawned) {
+                obstacle.despawn();
+            }
+        }
+        this.obstacles = [];
+        
+        // Clear map data by loading an empty map
+        if (this.world) {
+            console.log(`[GateCrash] Clearing map data`);
+            this.world.loadMap({ blocks: {} });
+        }
+        
+        console.log(`[GateCrash] Cleanup complete`);
+    }
+
+    /**
+     * Check if a player has fallen off the course
+     * @param player The player entity to check
+     * @returns Whether the player has fallen off
+     */
+    public hasPlayerFallenOff(player: PlayerEntity): boolean {
+        // Simple check if player is below a certain Y level
+        return player.position.y < -5;
+    }
+
+    /**
+     * Get obstacle count
+     */
+    public getObstacleCount(): number {
+        return this.obstacles.length;
+    }
+    
+    // Required methods from abstract base class
+    protected onTick(payload: any): void {
+        // Check for fallen players and handle as needed
+        // Base class already handles checkpoints and finish line
+    }
+    
+    protected checkRoundOverConditions(): void {
+        // Implement game-specific round over conditions
+    }
+} 

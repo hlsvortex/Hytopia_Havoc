@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "hytopia-helper": {
+      "command": "bunx",
+      "args": [
+        "-y",
+        "topia-mcp@latest",
+        "serve",
+        "--dir",
+        "C:\\Users\\bloodvortex2\\Documents\\GitHub\\Hytopia_FallGuys"
+      ]
+    }
+  }
+}

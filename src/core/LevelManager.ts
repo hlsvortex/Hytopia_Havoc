@@ -169,6 +169,7 @@ export class LevelManager {
 				// Then force an empty map to be sure
 				this.world.loadMap({ blocks: {} });
 				
+				
 				// Reset active level
 				this.activeLevel = null;
 				this.activeLevelId = null;

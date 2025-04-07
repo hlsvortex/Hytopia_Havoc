@@ -1,5 +1,7 @@
 import { MenuType } from './MenuType.js';
 import ExamplePanel from './panels/ExamplePanel.js';
+import MainMenuPanel from './panels/MainMenuPanel.js';
+
 export class MenuSystem {
     constructor() {
         this.panels = new Map();
@@ -8,11 +10,12 @@ export class MenuSystem {
         this.initGlobalListeners();
 
 		//this.openMenu(MenuType.CLASS_SELECT);
-		this.openMenu(MenuType.HUD);
+		//this.openMenu(MenuType.HUD);
+        this.openMenu(MenuType.MAIN_MENU, true);
 
         // Add timeout to ensure DOM is ready
         setTimeout(() => {
-            this.openMenu(MenuType.HUD);
+            this.openMenu(MenuType.MAIN_MENU, true);
         }, 1000);
         
         // Initialize cursor manager
@@ -31,10 +34,12 @@ export class MenuSystem {
     }
 
     registerPanels() {
-        // Register HUD panels (always visible)
+        // Register HUD panels (always visible when in-game)
+       
+        // Register Main Menu panel
         this.registerPanel(
-            MenuType.HUD,
-			new ExamplePanel()
+            MenuType.MAIN_MENU,
+            new MainMenuPanel()
         );
 	
 		/*

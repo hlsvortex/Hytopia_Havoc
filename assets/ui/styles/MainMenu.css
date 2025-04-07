@@ -1,0 +1,408 @@
+/* Main Menu Container */
+.main-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #23d5ab;
+    background-image: 
+        linear-gradient(135deg, rgba(0, 210, 170, 0.6) 0%, rgba(0, 210, 170, 0.6) 100%),
+        repeating-linear-gradient(45deg, #23d5ab 0%, #23d5ab 25%, #00ca9d 25%, #00ca9d 50%, #23d5ab 50%, #23d5ab 75%, #00ca9d 75%, #00ca9d 100%);
+    background-size: cover, 50px 50px;
+    color: white;
+    z-index: 1000;
+    font-family: 'Baloo 2', 'Arial Rounded MT Bold', sans-serif;
+    overflow: hidden;
+}
+
+/* Top Navigation */
+.top-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: rgba(0, 0, 0, 0.9);
+    height: 55px;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.5);
+    position: relative;
+}
+
+.nav-icons {
+    display: flex;
+    gap: 8px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+}
+
+.nav-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #333;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav-icon.active {
+    background-color: #ff42a1;
+    box-shadow: 0 0 15px rgba(255, 66, 161, 0.6);
+    transform: scale(1.1);
+}
+
+.nav-icon:hover:not(.active) {
+    background-color: #444;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.nav-icon i {
+    font-size: 20px;
+}
+
+/* Top Right Container */
+.top-right-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+    z-index: 2;
+    margin-left: auto;
+}
+
+.currency-container {
+    display: flex;
+    gap: 10px;
+}
+
+.currency {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 6px 15px;
+    border-radius: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.currency-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 24px;
+    height: 24px;
+}
+
+.currency-icon i {
+    font-size: 18px;
+}
+
+.kudos .currency-icon i {
+    color: #ffb700;
+}
+
+.crowns .currency-icon i {
+    color: #ffce00;
+}
+
+.currency-amount {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.settings-btn {
+    width: 42px;
+    height: 42px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 18px;
+}
+
+.settings-btn:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Character Display */
+.character-display {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -40%);
+    width: 200px;
+    height: 300px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.character-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    background-color: rgba(255, 66, 161, 0.8);
+    border-radius: 100px 100px 50px 50px;
+    padding: 20px;
+}
+
+.character-placeholder i {
+    font-size: 120px;
+}
+
+/* Season Progress */
+.season-progress-container {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 320px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 10px 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.season-label {
+    font-size: 14px;
+    text-transform: uppercase;
+    color: #ff5eae;
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+.season-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.level-badge {
+    background: #ff5eae;
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    font-weight: bold;
+    box-shadow: 0 0 5px rgba(255, 94, 174, 0.7);
+}
+
+.xp-bar-container {
+    flex: 1;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.xp-bar {
+    height: 100%;
+    width: 75%;
+    background: linear-gradient(90deg, #ff5eae, #ff9eae);
+    border-radius: 10px;
+}
+
+.xp-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Show Selector */
+.show-selector-container {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.show-selector-button {
+    background-color: rgba(46, 191, 250, 0.9);
+    border-radius: 10px;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.show-selector-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+}
+
+.show-selector-button span {
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.key-shortcut {
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    position: absolute;
+    bottom: -15px;
+    right: 5px;
+}
+
+/* Play Button */
+.play-button-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    margin-top: 15px;
+}
+
+.play-button {
+    width: 200px;
+    height: 70px;
+    background: linear-gradient(135deg, #ffbc36 0%, #ff7336 100%);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    transition: all 0.2s ease;
+    padding: 5px;
+    position: relative;
+    overflow: hidden;
+}
+
+.play-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 50%;
+    background: linear-gradient(rgba(255, 255, 255, 0.2), transparent);
+    border-radius: 10px 10px 0 0;
+}
+
+.play-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.play-text {
+    font-size: 24px;
+    font-weight: 800;
+    color: white;
+    text-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
+    letter-spacing: 1px;
+}
+
+.play-mode {
+    font-size: 16px;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Media Queries for Responsive Design */
+@media screen and (max-width: 768px) {
+    .nav-icon {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .nav-icon i {
+        font-size: 18px;
+    }
+    
+    .season-progress-container {
+        width: 260px;
+    }
+    
+    .play-button {
+        width: 160px;
+        height: 60px;
+    }
+    
+    .play-text {
+        font-size: 20px;
+    }
+}
+
+@media screen and (max-width: 576px) {
+    .top-nav {
+        padding: 10px;
+    }
+    
+    .nav-icons {
+        gap: 4px;
+    }
+    
+    .nav-icon {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .nav-icon i {
+        font-size: 16px;
+    }
+    
+    .season-progress-container {
+        width: 220px;
+        padding: 8px 12px;
+    }
+    
+    .season-label {
+        font-size: 12px;
+    }
+    
+    .level-badge {
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+    }
+    
+    .play-button {
+        width: 140px;
+        height: 50px;
+    }
+    
+    .play-text {
+        font-size: 18px;
+    }
+    
+    .play-mode {
+        font-size: 14px;
+    }
+} 

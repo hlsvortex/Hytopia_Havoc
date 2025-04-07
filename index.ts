@@ -36,8 +36,34 @@ startServer(world => {
 		console.warn("[Server] No levels available to load");
 	}
 	
-	// Handle player joining - create player entity but let GameManager handle game logic
+	// Handle player joining - show main menu first, don't spawn player yet
 	world.on(PlayerEvent.JOINED_WORLD, ({ player }) => {
+		console.log(`Player joined: ${player.id}`);
+		
+		// Load the UI for the player (which will show the main menu)
+		player.ui.load('ui/index.html');
+		
+		// Send welcome message
+		world.chatManager.sendBroadcastMessage(`Welcome to Fall Guys!`);
+		
+		// Configure callback for when UI is loaded to show the main menu
+		setTimeout(() => {
+			// Tell UI to show main menu
+			player.ui.sendData({
+				type: 'SHOW_MAIN_MENU'
+			});
+		}, 1500); // Give UI time to load
+	});
+	
+	// Register a command to start the game from the UI
+	world.chatManager.registerCommand("/joingame", (player, args) => {
+		console.log(`Player ${player.id} joining game from main menu`);
+		spawnPlayerInGame(player);
+		return "Joining game...";
+	});
+	
+	// Function to spawn player in game when they click Play
+	function spawnPlayerInGame(player: Player) {
 		// Create a PlayerController instance
 		const playerController = new PlayerController();
 		
@@ -62,12 +88,8 @@ startServer(world => {
 		playerEntity.player.camera.setForwardOffset(-6);  // Camera position behind player
 		playerEntity.player.camera.setOffset({ x: 0, y: 1.5, z: 0 }); // Position at head level
 		
-		// Load the UI for the player
-		player.ui.load('ui/index.html');
-		
-		// Send welcome message and instructions to player
-		world.chatManager.sendBroadcastMessage(`Welcome to Fall Guys!`);
-		world.chatManager.sendBroadcastMessage(`Use WASD to move, Space to jump, and C to set checkpoints.`);
+		// Send instructions to player
+		world.chatManager.sendPlayerMessage(player, `Use WASD to move, Space to jump, and C to set checkpoints.`);
 		
 		// Set initial checkpoint near start area
 		if (playerEntity.isSpawned) {
@@ -88,7 +110,7 @@ startServer(world => {
 				playerController.handleFall(playerEntity);
 			}
 		});
-	});
+	}
 
 	// Handle player leaving
 	world.on(PlayerEvent.LEFT_WORLD, ({ player }) => {

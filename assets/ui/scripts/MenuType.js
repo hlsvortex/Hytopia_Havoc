@@ -3,4 +3,5 @@ export const MenuType = {
     HUD: 'HUD',
     MATCH_STATS: 'MATCH_STATS',
     ROUND_WINNER: 'ROUND_WINNER',
+    MAIN_MENU: 'MAIN_MENU',
 }; 

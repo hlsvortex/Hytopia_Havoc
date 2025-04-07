@@ -125,9 +125,6 @@ export abstract class LevelController {
             if (this.world && this.currentMapData && this.currentMapData.blocks) {
                 const blocks = this.currentMapData.blocks;
                 let blockCount = 0;
-                
-                console.log(`[LevelController] Starting block cleanup - found ${Object.keys(blocks).length} blocks to clear`);
-                
                 // Iterate through all blocks in the map and set them to 0 (air)
                 for (const blockKey in blocks) {
                     if (Object.prototype.hasOwnProperty.call(blocks, blockKey)) {
@@ -138,11 +135,6 @@ export abstract class LevelController {
                             // Set the block to air (0)
                             this.world.chunkLattice.setBlock({x, y, z}, 0);
                             blockCount++;
-                            
-                            // Log every 100 blocks for progress tracking
-                            if (blockCount % 100 === 0) {
-                                console.log(`[LevelController] Cleared ${blockCount}/${Object.keys(blocks).length} blocks...`);
-                            }
                         }
                     }
                 }
@@ -151,15 +143,11 @@ export abstract class LevelController {
 					chunk.despawn();
 				});
                 
-                console.log(`[LevelController] COMPLETED block cleanup - cleared ${blockCount} blocks by setting to air`);
-                
-                // Force a visual refresh by loading an empty map immediately after
-                console.log(`[LevelController] Forcing visual refresh with empty map load`);
                 this.world.loadMap({ blocks: {} });
-            } else {
+        
+		    } else {
                 // Attempt to load empty map as fallback if no current map data
                 if (this.world) {
-                    console.log(`[LevelController] No map data found, attempting to clear with empty map`);
                     this.world.loadMap({ blocks: {} });
                 }
             }

@@ -7,40 +7,84 @@ export default class ExamplePanel extends BasePanel {
     }
 
     init() {
-        this.container.classList.add('panel');
         this.container.innerHTML = `
-            <div class="target-info">
-                <div class="target-name"></div>
-                <div class="target-vitals">
-                    <div class="health-bar">
-                        <div class="bar-fill"></div>
-                        <div class="bar-text"></div>
+            <div id="class-select-menu" class="class-select-menu">
+                <div class="class-buttons">
+                    <div class="class-button wizard" data-class="wizard">
+                        <div class="class-icon"></div>
+                        <div class="class-info">
+                            <h3>Wizard</h3>
+                            <p>
+                                <strong>LMB</strong><span>Fireball</span><br>
+                                <strong>RMB</strong><span>Fire Darts</span><br>
+                                <strong>SPACE</strong><span>Flight</span>
+                            </p>
+                        </div>
                     </div>
-                    <div class="mana-bar">
-                        <div class="bar-fill"></div>
-                        <div class="bar-text"></div>
+                    <div class="class-button fighter" data-class="fighter">
+                        <div class="class-icon"></div>
+                        <div class="class-info">
+                            <h3>Barbarian</h3>
+                            <p>
+                                <strong>LMB</strong><span>Spirit Axe</span><br>
+                                <strong>RMB</strong><span>Charge Slash</span><br>
+                                <strong>SPACE</strong><span>Glide</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="class-button archer" data-class="archer">
+                        <div class="class-icon"></div>
+                        <div class="class-info">
+                            <h3>Archer</h3>
+                            <p>
+                                <strong>LMB</strong><span>Precision Shot</span><br>
+                                <strong>RMB</strong><span>Fuse Bomb</span><br>
+                                <strong>SPACE</strong><span>Double Jump</span>
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
         `;
 
-        this.nameElement = this.container.querySelector('.target-name');
-        this.healthFill = this.container.querySelector('.health-bar .bar-fill');
-        this.healthText = this.container.querySelector('.health-bar .bar-text');
-        this.manaFill = this.container.querySelector('.mana-bar .bar-fill');
-        this.manaText = this.container.querySelector('.mana-bar .bar-text');
-
         this.addEventListeners();
-        this.closePanel();
     }
 
     addEventListeners() {
-        hytopia.onData(data => {
-            if (data.type === 'targetUpdate') {
-                this.updateTarget(data.target);
-            }
-        });
+		this.container.querySelectorAll('.class-button').forEach(button => {
+			button.addEventListener('click', (e) => {
+				const className = button.dataset.class;
+				this.handleClassSelect(className);
+			});
+		});
+
+
+		hytopia.onData(data => {
+			if (data.type === 'SHOW_CLASS_SELECT') {
+
+				this.openPanel();
+				hytopia.sendData({
+					type: 'TOGGLE_POINTER_LOCK',
+					enabled: true
+				});
+			}
+		});
     }
+
+
+	handleClassSelect(className) {
+		hytopia.sendData({
+			type: 'CLASS_CHANGE',
+			className: className
+		});
+
+		this.closePanel();
+
+		hytopia.sendData({
+			type: 'TOGGLE_POINTER_LOCK',
+			enabled: false
+		});
+	}
 
     updateTarget(targetData) {
         if (!targetData) {

@@ -21,6 +21,16 @@ export class GameManager {
 		this.registerHytopiaListeners();
 	}
 
+	// Check if the game is currently in progress
+	public isGameInProgress(): boolean {
+		return this.state === 'Starting' || this.state === 'RoundInProgress' || this.state === 'PostRound';
+	}
+
+	// Get the current game state
+	public getGameState(): GameState {
+		return this.state;
+	}
+
 	private registerHytopiaListeners(): void {
 		this.world.on(PlayerEvent.JOINED_WORLD, this.handlePlayerJoin.bind(this));
 		this.world.on(PlayerEvent.LEFT_WORLD, this.handlePlayerLeave.bind(this));

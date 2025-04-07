@@ -107,6 +107,17 @@ export default class MainMenuPanel extends BasePanel {
                 });
             }
             
+            // Handle close menu request (for spectator mode)
+            if (data.type === 'CLOSE_MENU') {
+                this.closePanel();
+                
+                // Disable pointer in UI
+                hytopia.sendData({
+                    type: 'TOGGLE_POINTER_LOCK',
+                    enabled: false
+                });
+            }
+            
             // Update player data if received
             if (data.type === 'PLAYER_DATA_UPDATE') {
                 this.updatePlayerData(data.playerData);
@@ -121,7 +132,10 @@ export default class MainMenuPanel extends BasePanel {
         this.closePanel();
         
         // Send chat command to join the game
-        hytopia.sendChatCommand('/joingame');
+        hytopia.sendData({
+            type: 'CHAT_COMMAND',
+            command: '/play'
+        });
         
         // Disable pointer in UI
         hytopia.sendData({

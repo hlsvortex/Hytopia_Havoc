@@ -39,7 +39,7 @@ export const gameConfig = {
       controller: SeesawLevelController,
       levelType: 'Qualification',
       minPlayers: 1,
-      maxPlayers: 60,
+      maxPlayers: 24,
       minRound: 1,
       maxRound: 4,
       isFinalRound: false,

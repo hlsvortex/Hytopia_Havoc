@@ -128,16 +128,16 @@ export default class MainMenuPanel extends BasePanel {
     handlePlayButtonClick() {
         console.log('Play button clicked - joining game');
         
-        // Close the main menu panel
-        this.closePanel();
-        
-        // Send chat command to join the game
+        // Send JOIN_GAME action to the server via UIBridge
         hytopia.sendData({
-            type: 'CHAT_COMMAND',
-            command: '/play'
+            type: 'UI_ACTION',
+            action: 'JOIN_GAME'
         });
         
-        // Disable pointer in UI
+        // No need to close panel here, server can decide if needed
+        // this.closePanel();
+        
+        // Disable pointer in UI immediately for better feel
         hytopia.sendData({
             type: 'TOGGLE_POINTER_LOCK',
             enabled: false

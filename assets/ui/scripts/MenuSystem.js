@@ -1,6 +1,7 @@
 import { MenuType } from './MenuType.js';
 import ExamplePanel from './panels/ExamplePanel.js';
 import MainMenuPanel from './panels/MainMenuPanel.js';
+import LevelSelectPanel from './panels/LevelSelectPanel.js';
 
 export class MenuSystem {
     constructor() {
@@ -24,11 +25,11 @@ export class MenuSystem {
     
     setupPanelContainer() {
         // Get or create the panel container
-        this.panelContainer = document.getElementById('game-panels-container');
+        this.panelContainer = document.getElementById('panels-container');
         if (!this.panelContainer) {
             this.panelContainer = document.createElement('div');
-            this.panelContainer.id = 'game-panels-container';
-            this.panelContainer.className = 'game-panels-container';
+            this.panelContainer.id = 'panels-container';
+            this.panelContainer.className = 'panels-container';
             document.body.appendChild(this.panelContainer);
         }
     }
@@ -40,6 +41,12 @@ export class MenuSystem {
         this.registerPanel(
             MenuType.MAIN_MENU,
             new MainMenuPanel()
+        );
+        
+        // Register Level Select panel
+        this.registerPanel(
+            MenuType.LEVEL_SELECT,
+            new LevelSelectPanel()
         );
 	
 		/*

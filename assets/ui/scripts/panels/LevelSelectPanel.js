@@ -117,6 +117,17 @@ export default class LevelSelectPanel extends BasePanel {
     }
 
     startLevelSelection() {
+        // --- Clear any existing intervals first --- 
+        if (this.levelSelectionInterval) {
+            clearInterval(this.levelSelectionInterval);
+            this.levelSelectionInterval = null;
+        }
+        if (this.countdownInterval) {
+            clearInterval(this.countdownInterval);
+            this.countdownInterval = null;
+        }
+        // --- End Interval Clearing --- 
+        
         const panelElement = this.container.querySelector('#level-select');
         const randomizingContainer = this.container.querySelector('.randomizing-container');
         const detailsContainer = this.container.querySelector('.selected-details-container');
@@ -176,6 +187,13 @@ export default class LevelSelectPanel extends BasePanel {
     }
     
     updateLevelDisplay(isRandomizingView) {
+        // --- Guard: Only update if panel is considered open --- 
+        if (!this.isOpen) {
+            // console.log("[UI] updateLevelDisplay called while panel closed. Skipping."); // Optional log
+            return; 
+        }
+        // --- End Guard ---
+        
         const level = this.levels[this.currentLevelIndex];
         if (!level) return; // Guard if levels aren't loaded
 
@@ -187,8 +205,17 @@ export default class LevelSelectPanel extends BasePanel {
 
             if (levelNameText) levelNameText.textContent = level.name;
             if (levelDescriptionText) levelDescriptionText.textContent = level.description;
-            if (levelImage) levelImage.src = `${hytopia.cdnAssetsUrl}/ui/images/${level.image}`;
+            if (levelImage) levelImage.src = `${hytopia.cdnAssetsUrl}/ui/images/${level.image}`; 
             // Add error handling for image if needed
+            // Handle image error more gracefully to avoid console spam if needed
+             if (levelImage) {
+                levelImage.onerror = () => { 
+                    if (this.isOpen) { // Check again inside onerror
+                       levelImage.src = `${hytopia.cdnAssetsUrl}/ui/images/level_default.jpg`; 
+                    }
+                };
+                levelImage.src = `${hytopia.cdnAssetsUrl}/ui/images/${level.image}`;
+            }
         } else {
              // Update Selected Details View elements
             const headerLevelName = this.container.querySelector('.header-level-name');
@@ -200,7 +227,11 @@ export default class LevelSelectPanel extends BasePanel {
             if (description) description.textContent = level.description;
             if (typeTag) typeTag.textContent = level.type.toUpperCase();
             if (selectedImage) {
-                selectedImage.onerror = () => { selectedImage.src = `${hytopia.cdnAssetsUrl}/ui/images/level_default.jpg`; };
+                selectedImage.onerror = () => { 
+                    if (this.isOpen) { // Check again inside onerror
+                        selectedImage.src = `${hytopia.cdnAssetsUrl}/ui/images/level_default.jpg`; 
+                    }
+                };
                 selectedImage.src = `${hytopia.cdnAssetsUrl}/ui/images/${level.image}`;
             }
             // TODO: Potentially update medal requirements based on level data if available
@@ -248,5 +279,29 @@ export default class LevelSelectPanel extends BasePanel {
             }, 1000); 
 
         }, 3000); 
+    }
+
+    // Override closePanel from BasePanel to add specific cleanup
+    closePanel() {
+        super.closePanel(); // Call the parent method to handle basic closing
+        
+        // --- Clear intervals specific to this panel --- 
+        if (this.levelSelectionInterval) {
+            console.log("[UI] Clearing level selection interval on close.");
+            clearInterval(this.levelSelectionInterval);
+            this.levelSelectionInterval = null;
+        }
+        if (this.countdownInterval) {
+            console.log("[UI] Clearing countdown interval on close.");
+            clearInterval(this.countdownInterval);
+            this.countdownInterval = null;
+        }
+        // --- End Interval Clearing --- 
+        
+        // Optional: Reset any state classes if needed when closing prematurely
+        const panelElement = this.container.querySelector('#level-select');
+         if(panelElement) {
+            panelElement.classList.remove('state-selected-details', 'state-countdown-active');
+         }
     }
 } 

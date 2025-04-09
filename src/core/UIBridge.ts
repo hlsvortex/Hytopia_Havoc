@@ -92,9 +92,8 @@ export class UIBridge {
     }
 
     public broadcastData(data: object): void {
-        // Get players via GameManager
         const players: Player[] = this.gameManager.getPlayers(); 
-        players.forEach((p: Player) => { // Explicitly type p as Player
+        players.forEach((p: Player) => {
              p.ui.sendData(data);
         });
      }
@@ -105,12 +104,10 @@ export class UIBridge {
     }
 
     public showLevelSelect(player: Player, levelList: any[]): void {
-         // First send the level data
          this.sendDataToPlayer(player, {
             type: 'LEVEL_SELECT_DATA',
             levels: levelList
         });
-        // Then tell UI to show level select
         this.sendDataToPlayer(player, { type: 'SHOW_LEVEL_SELECT' });
     }
 
@@ -120,5 +117,28 @@ export class UIBridge {
 
     public closeMenu(player: Player): void {
         this.sendDataToPlayer(player, { type: 'CLOSE_MENU' });
+    }
+
+    // Added method to show the HUD
+    public showHud(player: Player): void {
+        console.log(`[UIBridge] Sending SHOW_HUD to player ${player.id}`);
+        this.sendDataToPlayer(player, { type: 'SHOW_HUD' });
+        // Optionally send initial HUD data here too
+        // this.sendDataToPlayer(player, { type: 'UPDATE_HUD', hudData: { goal: 'Initial Goal' } });
+    }
+    
+    // Added method to hide the HUD
+    public hideHud(player: Player): void {
+        this.sendDataToPlayer(player, { type: 'HIDE_HUD' });
+    }
+    
+    // Added method to show animated text
+    public showAnimatedText(player: Player, line1: string, line2: string, duration: number = 3000): void {
+         this.sendDataToPlayer(player, { type: 'SHOW_ANIMATED_TEXT', textLine1: line1, textLine2: line2, duration });
+    }
+    
+     // Added method to broadcast animated text
+    public broadcastAnimatedText(line1: string, line2: string, duration: number = 3000): void {
+         this.broadcastData({ type: 'SHOW_ANIMATED_TEXT', textLine1: line1, textLine2: line2, duration });
     }
 } 

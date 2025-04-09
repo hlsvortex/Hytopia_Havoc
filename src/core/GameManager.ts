@@ -5,6 +5,7 @@ import { gameConfig } from '../config/gameConfig';
 import { LevelManager } from './LevelManager';
 import { UIBridge } from './UIBridge';
 import PlayerController from '../PlayerController';
+import { CourseLevelController } from './CourseLevelController';
 
 type GameState = 'Lobby' | 'Starting' | 'RoundInProgress' | 'PostRound' | 'GameOver';
 
@@ -130,7 +131,24 @@ export class GameManager {
 			return;
 		}
 		
-		console.log(`[GameManager] Spawning player ${player.id} in game.`);
+		// --- Get Spawn Point from Active Level Controller --- 
+		const activeLevelController = this.levelManager.getActiveLevelController();
+		let spawnPoint = { x: 0, y: 10, z: 0 }; // Default fallback spawn
+		
+		if (activeLevelController && activeLevelController instanceof CourseLevelController) {
+		    const courseController = activeLevelController as CourseLevelController;
+		    const levelSpawn = courseController.getSpawnPosition();
+		    if (levelSpawn) {
+		        spawnPoint = levelSpawn;
+		    } else {
+		         console.warn(`[GameManager] Active course level controller ${courseController.getLevelName()} did not provide a spawn point. Using default.`);
+		    }
+		} else {
+		     console.warn(`[GameManager] No active course level controller found. Using default spawn point.`);
+		}
+		// --- End Get Spawn Point ---
+		
+		console.log(`[GameManager] Spawning player ${player.id} in game at ${JSON.stringify(spawnPoint)}`);
 		this.uiBridge?.closeMenu(player);
 		
 		const playerController = new PlayerController();
@@ -146,9 +164,9 @@ export class GameManager {
 			controller: playerController,
 		});
 		
-		const spawnPoint = { x: 0, y: 10, z: 0 };
-		playerEntity.spawn(this.world, spawnPoint);
-		console.log(`[GameManager] Spawned entity for ${player.id} at ${JSON.stringify(spawnPoint)}`);
+		// Spawn at the determined spawn point
+		playerEntity.spawn(this.world, spawnPoint); 
+		// console.log(`[GameManager] Spawned entity for ${player.id} at ${JSON.stringify(spawnPoint)}`); // Log moved up
 		this.playerEntities.set(player.id, playerEntity);
 
 		player.camera.setMode(PlayerCameraMode.FIRST_PERSON);
@@ -157,9 +175,11 @@ export class GameManager {
 		player.camera.setAttachedToEntity(playerEntity);
 		
 		this.world.chatManager.sendPlayerMessage(player, `Use WASD to move, Space to jump.`);
-		playerController.setCheckpoint(spawnPoint);
+		playerController.setCheckpoint(spawnPoint); // Use the determined spawn point as the first checkpoint
 		
-		this.levelManager.registerPlayer(player);
+		if (activeLevelController) {
+		    activeLevelController.registerPlayer(player); // Register player with the actual controller
+		}
 
 		const tickListener = () => {
 			if (!playerEntity.isSpawned) {
@@ -167,7 +187,18 @@ export class GameManager {
 				return;
 			}
 			if (playerEntity.position.y < fallThreshold) {
-				playerController.handleFall(playerEntity);
+			    // --- Get Checkpoint Respawn --- 
+			    let respawnPoint = spawnPoint; // Default to initial spawn
+			    if (activeLevelController && activeLevelController instanceof CourseLevelController) {
+			        const courseController = activeLevelController as CourseLevelController;
+			        const checkpointSpawn = courseController.getCheckpointRespawnPosition(playerEntity.position);
+			        if (checkpointSpawn) {
+			            respawnPoint = checkpointSpawn;
+			        }
+			    }
+			     // Pass the calculated respawn point to handleFall
+			    playerController.handleFall(playerEntity, respawnPoint); 
+			     // --- End Get Checkpoint Respawn ---
 			}
 		};
 		this.world.on(EntityEvent.TICK, tickListener);
@@ -222,7 +253,7 @@ export class GameManager {
 		// Initialize RoundManager if it doesn't exist (first round)
 		if (!this.roundManager) {
 			const initialPlayerIds = Array.from(this.players.keys());
-			this.roundManager = new RoundManager(this.world, initialPlayerIds);
+			this.roundManager = new RoundManager(this.world, initialPlayerIds, this.levelManager);
 			this.roundManager.events.on('GameEndConditionMet', this.handleGameEndConditionMet.bind(this));
 			console.log('[GameManager] 4. Round Manager initialized.');
 		} else {
@@ -248,15 +279,19 @@ export class GameManager {
 		 console.log(`[GameManager] 7. Received signal to begin gameplay.`);
 		  if (this.state !== 'RoundInProgress') {
 			console.warn(`[GameManager] Cannot begin round gameplay in state: ${this.state}.`);
-			// Maybe force state? Or just ignore?
 			return; 
 		}
 		
-		// Start the round logic via LevelManager
-		console.log(`[GameManager] 8. Attempting to start round gameplay via LevelManager.`);
-		if (this.levelManager.startRound()) { 
+		// Show HUD for all players
+		console.log('[GameManager] Showing HUD for all players.');
+		this.players.forEach(player => {
+			this.uiBridge?.showHud(player);
+		});
+		
+		// Start the round logic via LevelManager, passing the current players
+		console.log(`[GameManager] 8. Attempting to start round gameplay via LevelManager with ${this.players.size} players.`);
+		if (this.levelManager.startRound(this.getPlayers())) { // Pass players map 
 			console.log(`[GameManager] 9. Round gameplay started successfully.`);
-			// LevelController's startRound should handle countdowns, etc.
 		} else {
 			console.error(`[GameManager] LevelManager failed to start round gameplay. Ending game.`);
 			this.endGame('FailedToStartRoundGameplay');

@@ -1,5 +1,5 @@
 // Update RoundManager to work with LevelManager and GameConfig
-import { World } from 'hytopia';
+import { World, Player } from 'hytopia';
 import { EventEmitter } from '../utils/EventEmitter';
 import { type LevelConfiguration } from '../config/LevelConfiguration';
 import { LevelManager } from './LevelManager';
@@ -9,7 +9,7 @@ export class RoundManager {
     public events = new EventEmitter<{ 
         GameEndConditionMet: string;
         RoundStart: LevelConfiguration & { roundNumber: number };
-        BeforeRoundTransition: { nextLevel: LevelConfiguration | null, qualifiedPlayers: string[] };
+        BeforeRoundTransition: { nextLevelId: string | null, qualifiedPlayers: string[] };
         RoundComplete: { qualifiedPlayers: string[], eliminatedPlayers: string[] };
     }>();
     
@@ -19,16 +19,17 @@ export class RoundManager {
     private currentRound: number = 0;
     private usedLevelIds: Set<string> = new Set();
 
-    constructor(world: World, initialPlayerIds: string[]) {
+    constructor(world: World, initialPlayerIds: string[], levelManager: LevelManager) {
         this.world = world;
         this.activePlayerIds = [...initialPlayerIds];
-        this.levelManager = new LevelManager(world);
+        this.levelManager = levelManager;
         
         console.log(`[RoundManager] Initialized with ${initialPlayerIds.length} players`);
     }
     
     startNextRound(): void {
         this.currentRound++;
+        console.log(`[RoundManager] Starting logic for round ${this.currentRound}`);
         
         if (this.currentRound > gameConfig.maxRounds) {
             console.log('[RoundManager] Max rounds reached, ending game');
@@ -36,103 +37,105 @@ export class RoundManager {
             return;
         }
         
-        if (this.activePlayerIds.length <= 1) {
-            console.log('[RoundManager] Only one player left, ending game');
+        if (this.activePlayerIds.length <= 1 && this.currentRound > 1) {
+            console.log('[RoundManager] Only one or zero players left, ending game');
             this.events.emit('GameEndConditionMet', 'LastPlayerStanding');
             return;
         }
         
-        // For final round, filter to only select levels marked as final
         const isFinalRound = this.currentRound === gameConfig.maxRounds;
+        const availableConfigs = this.levelManager.getAvailableLevelConfigs();
+
+        let currentExcludeIds = Array.from(this.usedLevelIds);
+        if (currentExcludeIds.length >= availableConfigs.length) {
+             console.warn(`[RoundManager] Used all levels, allowing reuse.`);
+             this.usedLevelIds.clear();
+             currentExcludeIds = [];
+        } else if (currentExcludeIds.length === availableConfigs.length -1) {
+             const lastUnused = availableConfigs.find(c => !this.usedLevelIds.has(c.id));
+             if (lastUnused) {
+                 console.log(`[RoundManager] Only ${lastUnused.id} left, allowing it.`);
+                 currentExcludeIds = currentExcludeIds.filter(id => id !== lastUnused.id);
+             }
+        }
+
         
-        // Select a level based on the current round and number of players
-        // Exclude levels we've already used unless we're out of options
-        const excludeIds = Array.from(this.usedLevelIds);
+        const eligibleLevels = availableConfigs.filter((config: LevelConfiguration) => {
+             if (currentExcludeIds.includes(config.id)) return false;
+
+             const minRound = config.minRound ?? 1;
+             const maxRound = config.maxRound ?? gameConfig.maxRounds;
+             if (this.currentRound < minRound || this.currentRound > maxRound) return false;
+
+             const minPlayers = config.minPlayers ?? 1;
+             const maxPlayers = config.maxPlayers ?? Infinity;
+             if (this.activePlayerIds.length < minPlayers || this.activePlayerIds.length > maxPlayers) return false;
+
+             if (isFinalRound !== (config.isFinalRound ?? false)) return false;
+
+             return true;
+        });
+
         
-        // If we're running out of levels, allow reusing
-        if (excludeIds.length >= this.levelManager.getAvailableLevels().length - 1) {
-            // Keep only the most recently used level in the exclude list
-            const recentlyUsed = Array.from(this.usedLevelIds).pop();
-            if (recentlyUsed) {
-                this.usedLevelIds.clear();
-                this.usedLevelIds.add(recentlyUsed);
-            }
+        if (eligibleLevels.length === 0) {
+             console.error(`[RoundManager] No eligible levels found for round ${this.currentRound} with ${this.activePlayerIds.length} players. Filters: exclude=[${currentExcludeIds.join(',')}], isFinal=${isFinalRound}`);
+             this.events.emit('GameEndConditionMet', 'NoSuitableLevels');
+             return;
         }
         
-        const selectedLevelId = this.levelManager.getRandomLevel(
-            this.currentRound,
-            this.activePlayerIds.length,
-            isFinalRound ? [] : Array.from(this.usedLevelIds) // Don't exclude for final round
-        );
+        const randomIndex = Math.floor(Math.random() * eligibleLevels.length);
+        const selectedLevelConfig = eligibleLevels[randomIndex];
+        const selectedLevelId = selectedLevelConfig.id;
         
-        if (!selectedLevelId) {
-            console.error('[RoundManager] Failed to select a level for the next round');
-            this.events.emit('GameEndConditionMet', 'NoSuitableLevels');
-            return;
-        }
-        
-        // Add to used levels
         this.usedLevelIds.add(selectedLevelId);
-        
         console.log(`[RoundManager] Selected level for round ${this.currentRound}: ${selectedLevelId}`);
         
-        // Activate the selected level
-        if (this.levelManager.activateLevel(selectedLevelId)) {
-            // Register active players with the level
-            this.activePlayerIds.forEach(playerId => {
-                console.log(`[RoundManager] Tracking player ID: ${playerId}`);
-            });
-            
-            // Start the round
-            if (this.levelManager.startRound()) {
-                console.log(`[RoundManager] Round ${this.currentRound} started with ${this.activePlayerIds.length} players`);
-                
-                // Subscribe to the level's RoundEnd event
-                const activeLevel = this.levelManager.getActiveLevel();
-                if (activeLevel) {
-                    activeLevel.events.on('RoundEnd', this.handleRoundEnd.bind(this));
-                }
-            } else {
-                console.error('[RoundManager] Failed to start round!');
-                this.events.emit('GameEndConditionMet', 'FailedToStartRound');
-            }
-        } else {
-            console.error(`[RoundManager] Failed to activate level: ${selectedLevelId}`);
-            this.events.emit('GameEndConditionMet', 'FailedToActivateLevel');
-        }
+        this.events.emit('BeforeRoundTransition', { nextLevelId: selectedLevelId, qualifiedPlayers: this.activePlayerIds });
+        console.log(`[RoundManager] Emitted BeforeRoundTransition for level ${selectedLevelId}`);
     }
     
     private handleRoundEnd(data: { q: string[], e: string[] }): void {
-        console.log(`[RoundManager] Round ended with ${data.q.length} qualified, ${data.e.length} eliminated`);
+        console.log(`[RoundManager] Round ${this.currentRound} ended. Qualified: ${data.q.length}, Eliminated: ${data.e.length}`);
         
-        // Update active players
         this.activePlayerIds = data.q;
         
-        if (this.activePlayerIds.length <= 1) {
-            console.log('[RoundManager] Only one player left after round, ending game');
-            this.events.emit('GameEndConditionMet', 'LastPlayerStanding');
-            return;
-        }
-        
-        // Emit event for round completion
         this.events.emit('RoundComplete', { 
             qualifiedPlayers: data.q, 
             eliminatedPlayers: data.e 
         });
         
-        // Unsubscribe from the level's events
-        const activeLevel = this.levelManager.getActiveLevel();
-        if (activeLevel) {
-            activeLevel.events.off('RoundEnd', this.handleRoundEnd.bind(this));
+        if (this.activePlayerIds.length <= 1 && this.currentRound >= 1) { 
+            console.log('[RoundManager] Only one or zero players left after round, ending game');
+            this.events.emit('GameEndConditionMet', 'LastPlayerStanding');
+            return;
         }
         
-        // Transition to next round
         this.startNextRound();
     }
     
+    public subscribeToActiveLevelEndEvent(): void {
+        const activeLevelController = this.levelManager.getActiveLevelController();
+        if (activeLevelController) {
+             console.log(`[RoundManager] Subscribing to RoundEnd event of ${activeLevelController.getLevelName()}`);
+             activeLevelController.events.on('RoundEnd', this.handleRoundEnd.bind(this));
+        } else {
+             console.error("[RoundManager] Cannot subscribe to level end event: No active level controller.");
+        }
+    }
+
+    public unsubscribeFromActiveLevelEndEvent(): void {
+        const activeLevelController = this.levelManager.getActiveLevelController();
+        if (activeLevelController) {
+             console.log(`[RoundManager] Unsubscribing from RoundEnd event of ${activeLevelController.getLevelName()}`);
+             console.warn("[RoundManager] Limitation: Cannot reliably unsubscribe from RoundEnd event due to bind(this). Consider refactoring listener binding.");
+        }
+    }
+
     cleanup(): void {
         console.log('[RoundManager] Cleaning up');
-        this.levelManager.cleanup();
+        this.currentRound = 0;
+        this.activePlayerIds = [];
+        this.usedLevelIds.clear();
     }
     
     getLastPlayerId(): string | null {

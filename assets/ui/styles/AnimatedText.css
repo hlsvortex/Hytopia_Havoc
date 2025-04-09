@@ -1,0 +1,69 @@
+/* --- Animated Text Overlay Styles --- */
+.animated-text-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 150; /* Above HUD, maybe above menus? */
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+}
+
+.animated-text-overlay.visible {
+    opacity: 1;
+}
+
+.animated-text-line {
+    font-family: 'Arial', sans-serif; /* Use a Fall Guys like font if available */
+    font-size: 120px;
+    font-weight: 900;
+    color: white;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.1;
+    text-shadow:
+        0 0 10px rgba(0, 0, 0, 0.7),
+        5px 5px 0px #ff00a6, /* Pink shadow */
+        -5px -5px 0px #00c4ff; /* Blue shadow */
+    transform: scale(0.5);
+    opacity: 0;
+    transition: transform 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.3s ease-out;
+}
+
+.animated-text-line.line-1 {
+    transition-delay: 0s; 
+}
+
+.animated-text-line.line-2 {
+    transition-delay: 0.1s; 
+    font-size: 100px; /* Slightly smaller second line */
+}
+
+/* Animate In */
+.animated-text-overlay.animate-in .animated-text-line {
+    transform: scale(1);
+    opacity: 1;
+}
+
+/* Animate Out */
+.animated-text-overlay.animate-out {
+     transition-delay: 0s; /* Start fade out immediately */
+}
+.animated-text-overlay.animate-out .animated-text-line {
+    transform: scale(1.2);
+    opacity: 0;
+    transition: transform 0.4s ease-in, opacity 0.4s ease-in; 
+}
+
+.animated-text-overlay.animate-out .animated-text-line.line-1 {
+     transition-delay: 0.05s;
+}
+.animated-text-overlay.animate-out .animated-text-line.line-2 {
+     transition-delay: 0s;
+} 

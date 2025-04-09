@@ -1,0 +1,93 @@
+/* --- HUD Styles --- */
+.hud-top-bar {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex; /* Hidden initially by JS */
+    justify-content: center;
+    align-items: center;
+    z-index: 50; /* Above gameplay, below menus */
+    gap: 30px; /* Space between goal and status */
+    pointer-events: none; /* Don't interfere with gameplay */
+}
+
+.hud-goal-container,
+.hud-status-container {
+    background-color: rgba(25, 28, 80, 0.8); /* Dark blue semi-transparent */
+    padding: 8px 20px;
+    border-radius: 15px;
+    border: 2px solid rgba(0, 196, 255, 0.5); /* Cyan border */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    color: white;
+    font-family: 'Arial', sans-serif;
+}
+
+.hud-goal-text {
+    font-size: 20px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.hud-status-container {
+    gap: 15px;
+    min-width: 200px; /* Ensure some width */
+    justify-content: center;
+}
+
+.hud-status-label {
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 5px;
+    margin-right: 5px;
+}
+
+/* Specific styling for status */
+.hud-status-container.status-qualified .hud-status-label {
+    background-color: #00ff88; /* Green */
+    color: #111;
+}
+
+.hud-status-container.status-eliminated .hud-status-label {
+    background-color: #ff4444; /* Red */
+    color: white;
+}
+
+.hud-status-count {
+    font-size: 22px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.hud-timer {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #ffee00;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+    margin-left: 10px;
+    padding-left: 15px;
+    border-left: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.hud-timer.hidden {
+    display: none;
+}
+
+.hud-timer.low-time {
+    color: #ff4444; /* Red when low */
+    animation: pulse-red 1s infinite;
+}
+
+@keyframes pulse-red {
+    0% { transform: scale(1); color: #ff4444; }
+    50% { transform: scale(1.05); color: #ff8888; }
+    100% { transform: scale(1); color: #ff4444; }
+} 

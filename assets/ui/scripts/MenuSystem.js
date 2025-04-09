@@ -2,6 +2,8 @@ import { MenuType } from './MenuType.js';
 import ExamplePanel from './panels/ExamplePanel.js';
 import MainMenuPanel from './panels/MainMenuPanel.js';
 import LevelSelectPanel from './panels/LevelSelectPanel.js';
+import HudPanel from './panels/HudPanel.js';
+import AnimatedTextPanel from './panels/AnimatedTextPanel.js';
 
 export class MenuSystem {
     constructor() {
@@ -47,6 +49,18 @@ export class MenuSystem {
         this.registerPanel(
             MenuType.LEVEL_SELECT,
             new LevelSelectPanel()
+        );
+        
+        // Register HUD Panel
+        this.registerPanel(
+            MenuType.HUD,
+            new HudPanel()
+        );
+        
+        // Register Animated Text Panel
+        this.registerPanel(
+            MenuType.ANIMATED_TEXT,
+            new AnimatedTextPanel()
         );
 	
 		/*
@@ -131,31 +145,18 @@ export class MenuSystem {
                 this.closeAllMenus();
                 return;
             }
-            
-            // Toggle inventory with 'I' key
-            if (e.key === 'i' || e.key === 'I') {
-                this.toggleMenu(MenuType.INVENTORY);
-                e.preventDefault(); // Prevent default browser behavior
-                return;
-            }
-            
-            // Toggle equipment with 'C' key
-            if (e.key === 'c' || e.key === 'C') {
-                this.toggleMenu(MenuType.EQUIPMENT);
-                e.preventDefault(); // Prevent default browser behavior
-                return;
-            }
         });
         
         // Prevent cursor locking when clicking on UI elements
         document.addEventListener('click', (e) => {
             // Check if the click is on a UI element
-            const isUIClick = e.target.closest('.inventory-ui, .equipment-ui, .loot-ui');
-            
+            //const isUIClick = e.target.closest('.inventory-ui, .equipment-ui, .loot-ui');
+            /*
             if (isUIClick) {
                 // Prevent the click from propagating to the document
-                e.stopPropagation();
+              //  e.stopPropagation();
             }
+            */
         }, true); // Use capture phase to intercept before other handlers
     }
 

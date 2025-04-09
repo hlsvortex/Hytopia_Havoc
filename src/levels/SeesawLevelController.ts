@@ -1,17 +1,18 @@
 import { World, PlayerEntity, Entity, type Vector3Like, Player } from 'hytopia';
-import { LevelController } from '../core/LevelController';
+import { CourseLevelController } from '../core/CourseLevelController';
 import { type LevelConfiguration } from '../config/LevelConfiguration';
 import SeesawEntity from '../obsticals/SeesawEntity';
 
 /**
  * Specialized level controller for seesaw obstacle course levels
  */
-export class SeesawLevelController extends LevelController {
+export class SeesawLevelController extends CourseLevelController {
 	private seesaws: SeesawEntity[] = [];
 	private baseDepth: number = 5;
 	private seesawDepth: number = 11;
 	private baseXOffset: number = 1;
 	private difficulty: 'easy' | 'medium' | 'hard' = 'medium';
+	private courseRowCount: number = 0;
 
 	/**
 	 * Create a new seesaw level controller
@@ -25,8 +26,27 @@ export class SeesawLevelController extends LevelController {
 		super(world, config);
 		this.difficulty = config.difficulty || 'medium';
 		console.log(`Created seesaw level with ${this.difficulty} difficulty`);
-		
-		// Don't create the course automatically - wait for explicit activation
+	}
+
+	/**
+	 * Define start/finish areas specifically for Seesaw level.
+	 */
+	protected setupCourseBoundaries(): void {
+		this.setStartArea(
+			{ x: 10, y: 2, z: -7 },
+			{ x: -10, y: 2, z: 7 },
+			1 // Spawn Height
+		);
+
+		// Example Finish Area (needs coordinates from the end of the map)
+		// Calculate Z based on the last obstacle added
+
+
+		this.setFinishArea(
+			{ x: 8, y: 0, z: 161 },
+			{ x: -8, y: 10, z: 181 }
+		);
+
 	}
 
 	/**
@@ -47,10 +67,8 @@ export class SeesawLevelController extends LevelController {
 		rows?: number;
 		width?: number;
 	} = {}): void {
-		// First ensure map is loaded before adding obstacles
 		this.loadMap();
 
-		// Set configuration with defaults
 		this.baseDepth = config.baseDepth ?? 5;
 		this.baseXOffset = config.baseXOffset ?? 1;
 		this.seesawDepth = config.seesawDepth ?? 11;
@@ -59,21 +77,18 @@ export class SeesawLevelController extends LevelController {
 
 		let depthIndex = 1;
 
-		// First section - straight line
 		this.addSeesaw({ x: this.baseXOffset, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex++ });
 		this.addSeesaw({ x: this.baseXOffset + 5, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex++ });
 		this.addSeesaw({ x: this.baseXOffset, y: 0.5, z: this.baseDepth + this.seesawDepth * depthIndex++ });
 
 		depthIndex += 2;
 
-		// Second section - three in a row including sides
 		this.addSeesaw({ x: this.baseXOffset, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex++ });
 		this.addSeesaw({ x: this.baseXOffset + width, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex });
 		this.addSeesaw({ x: this.baseXOffset - width, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex });
 
 		depthIndex += 3;
 
-		// Third section - more complex pattern
 		this.addSeesaw({ x: this.baseXOffset + width, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex });
 		this.addSeesaw({ x: this.baseXOffset - width, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex });
 
@@ -83,7 +98,6 @@ export class SeesawLevelController extends LevelController {
 		this.addSeesaw({ x: this.baseXOffset - width * 2, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex });
 		this.addSeesaw({ x: this.baseXOffset, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex });
 
-
 		depthIndex++;
 
 		this.addSeesaw({ x: this.baseXOffset + width, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex });
@@ -95,10 +109,8 @@ export class SeesawLevelController extends LevelController {
 
 		depthIndex += 3;
 
-		// Final section
 		this.addSeesaw({ x: this.baseXOffset, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex++ });
 
-		// Double seesaw challenge
 		this.addSeesaw({ x: this.baseXOffset - width, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex });
 		this.addSeesaw({ x: this.baseXOffset + width, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex });
 
@@ -106,21 +118,8 @@ export class SeesawLevelController extends LevelController {
 
 		this.addSeesaw({ x: this.baseXOffset, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex++ });
 		this.addSeesaw({ x: this.baseXOffset, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex++ });
-
-		/*
-		// Setup start and finish areas
-		this.setStartArea(
-			{ x: 10, y: 0, z: -7 },
-			{ x: -10, y: 5, z: 0 },
-			1 // Set spawn height
-		);
-  
-		// Add finish area
-		this.setFinishArea(
-			{ x: this.baseXOffset - 8, y: 0, z: this.baseDepth + this.seesawDepth * depthIndex - 5 },
-			{ x: this.baseXOffset + 8, y: 4, z: this.baseDepth + this.seesawDepth * depthIndex + 5 }
-		);
-		*/
+		
+		this.courseRowCount = depthIndex;
 
 		console.log(`Created seesaw course with ${this.seesaws.length} seesaws`);
 	}
@@ -132,7 +131,6 @@ export class SeesawLevelController extends LevelController {
 	public addSeesaw(position: Vector3Like): SeesawEntity {
 		const seesaw = new SeesawEntity();
 
-		// Apply difficulty settings
 		if (this.difficulty === 'easy') {
 			// Make seesaws more stable for easy difficulty
 			// Implementation depends on SeesawEntity's API
@@ -141,10 +139,8 @@ export class SeesawLevelController extends LevelController {
 			// Implementation depends on SeesawEntity's API
 		}
 
-		// Spawn the seesaw
 		seesaw.spawn(this.world, position);
 
-		// Add to our lists
 		this.seesaws.push(seesaw);
 
 		return seesaw;
@@ -156,37 +152,24 @@ export class SeesawLevelController extends LevelController {
 	public resetSeesaws(): void {
 		for (const seesaw of this.seesaws) {
 			if (seesaw.isSpawned) {
-				// Reset rotation to horizontal
 				seesaw.setRotation({ x: 0, y: 0, z: 0, w: 1 });
-
-				// Reset angular velocity
 				seesaw.setAngularVelocity({ x: 0, y: 0, z: 0 });
 			}
 		}
 	}
 
-	// Implement abstract methods from LevelController
 	public startRound(players: Player[]): void {
-		// Reset all seesaws before starting the round
 		this.resetSeesaws();
-
 		console.log(`[SeesawLevelController] Starting round with ${players.length} players`);
-
-		// Trigger round end after a delay (temporary)
 		setTimeout(() => {
 			const qualified = players.map(p => p.id);
 			const eliminated: string[] = [];
 			this.events.emit('RoundEnd', { q: qualified, e: eliminated });
-		}, 60000); // 1 minute round
+		}, 60000);
 	}
 
-	/**
-	 * Clean up this level before unloading
-	 */
 	public cleanup(): void {
 		console.log(`[SeesawLevelController] Cleaning up Seesaw level`);
-		
-		// Clear any seesaws created by this level
 		if (this.seesaws.length > 0) {
 			console.log(`[SeesawLevelController] Despawning ${this.seesaws.length} seesaws`);
 			this.seesaws.forEach(seesaw => {
@@ -196,27 +179,15 @@ export class SeesawLevelController extends LevelController {
 			});
 			this.seesaws = [];
 		}
-		
-		// Call the base class cleanup to handle map clearing correctly
-		console.log(`[SeesawLevelController] Calling base class cleanup for block clearing`);
+		console.log(`[SeesawLevelController] Calling base class cleanup for course areas and map clearing`);
 		super.cleanup();
-		
 		console.log(`[SeesawLevelController] Cleanup complete`);
 	}
 
-	/**
-	 * Check if a player has fallen off the course
-	 * @param player The player entity to check
-	 * @returns Whether the player has fallen off
-	 */
 	public hasPlayerFallenOff(player: PlayerEntity): boolean {
-		// Simple check if player is below a certain Y level
 		return player.position.y < -5;
 	}
 
-	/**
-	 * Get seesaw count
-	 */
 	public getSeesawCount(): number {
 		return this.seesaws.length;
 	}

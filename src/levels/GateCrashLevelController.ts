@@ -1,13 +1,13 @@
 // Placeholder for GateCrashLevelController
 import { World, PlayerEntity, Entity, type Vector3Like, Player } from 'hytopia';
-import { LevelController } from '../core/LevelController';
+import { CourseLevelController } from '../core/CourseLevelController';
 import { CrashWallObstacle, type CrashWallObstacleOptions } from '../obsticals/CrashWallObstacle';
 import { type LevelConfiguration } from '../config/LevelConfiguration';
 
 /**
  * Specialized level controller for gate crash obstacle course levels
  */
-export class GateCrashLevelController extends LevelController {
+export class GateCrashLevelController extends CourseLevelController {
     private obstacles: CrashWallObstacle[] = [];
     private difficulty: 'easy' | 'medium' | 'hard' = 'medium';
     private courseStartZ: number = 15;
@@ -26,8 +26,30 @@ export class GateCrashLevelController extends LevelController {
         super(world, config);
         this.difficulty = config.difficulty || 'medium';
         console.log(`Created gate crash level with ${this.difficulty} difficulty`);
+    }
+    
+    /**
+     * Define start/finish areas specifically for GateCrash level.
+     */
+    protected setupCourseBoundaries(): void {
+        // Example - Adjust these coordinates based on your actual map layout
+        this.setStartArea(
+            { x: 12, y: 2, z: -7 }, 
+            { x: -12, y: 2, z: 7 }, 
+            1 // Spawn Height
+        );
         
-        // Don't create the course automatically - wait for explicit activation
+        // Example Finish Area (needs coordinates from the end of the map)
+        // Calculate Z based on the last obstacle added
+        
+        
+        this.setFinishArea(
+            { x: 8, y: 0, z: 161 }, 
+            { x: -8, y: 10, z: 181 }
+        );
+        
+        // TODO: Add Checkpoint Areas if needed
+        // this.addCheckpointArea(...);
     }
     
     /**
@@ -36,6 +58,8 @@ export class GateCrashLevelController extends LevelController {
     public activate(): void {
         console.log(`[GateCrashLevelController] Activating level`);
         this.createCourse();
+        // Setup boundaries AFTER obstacles are created so we can potentially use their positions
+        this.setupCourseBoundaries(); 
     }
     
     /**
@@ -189,8 +213,7 @@ export class GateCrashLevelController extends LevelController {
         }
         this.obstacles = [];
         
-        // Call the base class cleanup to handle map clearing correctly
-        console.log(`[GateCrash] Calling base class cleanup for block clearing`);
+        console.log(`[GateCrash] Calling base class cleanup for course areas and map clearing`);
         super.cleanup();
         
         console.log(`[GateCrash] Cleanup complete`);

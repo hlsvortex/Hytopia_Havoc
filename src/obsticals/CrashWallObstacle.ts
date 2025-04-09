@@ -121,28 +121,30 @@ export class CrashWallObstacle extends ObstacleEntity {
 	public override onPhysicsUpdate(payload: EventPayloads[EntityEvent.TICK]): void {
 		if (!this.isMovementActive || !this.isSpawned) return;
 
-		// ALWAYS increment the timeAccumulator at the start
 		const deltaTimeS = payload.tickDeltaMs / 1000.0;
 		this.timeAccumulator += payload.tickDeltaMs;
 
-		// Remember previous state to detect transitions
 		const previousState = this.movementState;
+		let stateChanged = false; // Flag to log only on change
 
 		switch (this.movementState) {
 			case 'DELAYING':
 				if (this.timeAccumulator >= this.startDelay) {
-					this.movementState = 'MOVING_DOWN';
+					this.movementState = 'MOVING_DOWN'; // Start by ensuring it's down
 					this.targetPosition = this.downPosition;
 					this.timeAccumulator = 0;
+					stateChanged = true;
 				}
 				break;
 
 			case 'MOVING_UP':
-				this.moveTowards(this.targetPosition, deltaTimeS);
-
-				if (this.position.y >= this.targetPosition.y) {
+			    // Log position during upward movement
+			    // console.log(`[${this.id}] Moving Up: y=${this.position.y.toFixed(2)}, target=${this.targetPosition.y.toFixed(2)}`);
+				if (this.moveTowards(this.targetPosition, deltaTimeS)) {
+				    // Reached Target (Top)
 					this.movementState = 'WAITING_TOP';
 					this.timeAccumulator = 0;
+					stateChanged = true;
 				}
 				break;
 
@@ -151,19 +153,21 @@ export class CrashWallObstacle extends ObstacleEntity {
 					this.movementState = 'MOVING_DOWN';
 					this.targetPosition = this.downPosition;
 					this.timeAccumulator = 0;
+					stateChanged = true;
 				}
 				break;
 
 			case 'MOVING_DOWN':
-
-				// Check Y difference manually as a safeguard
-				const distToBottom = Math.abs(this.position.y - this.downPosition.y);
-				if (distToBottom < 0.05) {
-					// Only consider "at bottom" if we're very close to down position
+			    const distToBottom = Math.abs(this.position.y - this.downPosition.y);
+			    // Log position and distance during downward movement
+			    // console.log(`[${this.id}] Moving Down: y=${this.position.y.toFixed(2)}, target=${this.targetPosition.y.toFixed(2)}, dist=${distToBottom.toFixed(2)}`);
+			    
+				if (distToBottom < 0.05) { // Use a small threshold
+				    // Reached Target (Bottom)
 					this.movementState = 'WAITING_BOTTOM';
 					this.timeAccumulator = 0;
+					stateChanged = true;
 				} else {
-					// Still need to move toward target
 					this.moveTowards(this.targetPosition, deltaTimeS);
 				}
 				break;
@@ -173,6 +177,7 @@ export class CrashWallObstacle extends ObstacleEntity {
 					this.movementState = 'MOVING_UP';
 					this.targetPosition = this.originPosition;
 					this.timeAccumulator = 0;
+					stateChanged = true;
 				}
 				break;
 		}
@@ -185,30 +190,29 @@ export class CrashWallObstacle extends ObstacleEntity {
 		const currentY = currentPos.y;
 		const distanceY = targetY - currentY;
 		const directionY = Math.sign(distanceY);
-
 	
-		if (Math.abs(distanceY) < 0.001) {
-			// Already at target
-			return true;
+		if (Math.abs(distanceY) < 0.01) { // Reduced threshold slightly
+		    // Snap to exact target position if very close to prevent overshooting
+		    if (currentY !== targetY) { 
+		        this.setNextKinematicPosition(new Vector3(currentPos.x, targetY, currentPos.z));
+		    }
+			return true; // Already at target
 		}
 
 		const moveStep = this.moveSpeed * deltaTimeS;
 		let actualMoveDistance = Math.min(moveStep, Math.abs(distanceY));
-
 		const newY = currentY + directionY * actualMoveDistance;
-
+		
 		let finalY = newY;
 		let reachedTargetThisFrame = false;
+		// Check if the new position has passed or reached the target
 		if ((directionY > 0 && newY >= targetY) || (directionY < 0 && newY <= targetY)) {
-			finalY = targetY;
-			actualMoveDistance = Math.abs(distanceY);
+			finalY = targetY; // Snap to target if passed
+			actualMoveDistance = Math.abs(distanceY); // Ensure we didn't move more than needed
 			reachedTargetThisFrame = true;
 		}
 
 		const newPosition = new Vector3(currentPos.x, finalY, currentPos.z);
-
-
-
 		this.setNextKinematicPosition(newPosition);
 
 		return reachedTargetThisFrame;
@@ -221,11 +225,12 @@ export class CrashWallObstacle extends ObstacleEntity {
 
 	public resetState(): void {
 		if (!this.isSpawned) return;
-		this.setPosition(this.downPosition);
+		console.log(`[CrashWallObstacle ${this.id}] Resetting state...`); // Log reset
+		this.setPosition(this.downPosition); // Ensure starting down
 		this.movementState = 'DELAYING';
 		this.timeAccumulator = 0;
-		this.isMovementActive = true;
-		console.log(`[CrashWallObstacle ${this.id}] State reset.`);
+		this.isMovementActive = true; // Ensure movement is re-enabled
+		console.log(`[CrashWallObstacle ${this.id}] State reset complete. Pos y: ${this.position.y.toFixed(2)}, State: ${this.movementState}`);
 	}
 
 	public override despawn(): void {

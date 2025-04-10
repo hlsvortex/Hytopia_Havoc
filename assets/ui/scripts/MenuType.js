@@ -8,5 +8,7 @@ export const MenuType = {
     INVENTORY: 'INVENTORY',
     EQUIPMENT: 'EQUIPMENT',
     LEVEL_SELECT: 'LEVEL_SELECT',
-    ANIMATED_TEXT: 'ANIMATED_TEXT'
+    ANIMATED_TEXT: 'ANIMATED_TEXT',
+    ROUND_RESULTS: 'RoundResults',
+    WIN_SCREEN: 'WinScreen'
 }; 

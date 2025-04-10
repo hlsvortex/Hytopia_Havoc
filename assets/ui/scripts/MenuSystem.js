@@ -4,6 +4,7 @@ import MainMenuPanel from './panels/MainMenuPanel.js';
 import LevelSelectPanel from './panels/LevelSelectPanel.js';
 import HudPanel from './panels/HudPanel.js';
 import AnimatedTextPanel from './panels/AnimatedTextPanel.js';
+import RoundResultsPanel from './panels/RoundResultsPanel.js';
 
 export class MenuSystem {
     constructor() {
@@ -61,6 +62,12 @@ export class MenuSystem {
         this.registerPanel(
             MenuType.ANIMATED_TEXT,
             new AnimatedTextPanel()
+        );
+        
+        // Register Round Results Panel
+        this.registerPanel(
+            MenuType.ROUND_RESULTS,
+            new RoundResultsPanel()
         );
 	
 		/*

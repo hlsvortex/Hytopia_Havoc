@@ -2,6 +2,7 @@ import { World, PlayerEntity, Entity, type Vector3Like, Player } from 'hytopia';
 import { CourseLevelController } from '../core/CourseLevelController';
 import { type LevelConfiguration } from '../config/LevelConfiguration';
 import SeesawEntity from '../obsticals/SeesawEntity';
+import { UIBridge } from '../core/UIBridge';
 
 /**
  * Specialized level controller for seesaw obstacle course levels
@@ -18,12 +19,14 @@ export class SeesawLevelController extends CourseLevelController {
 	 * Create a new seesaw level controller
 	 * @param world Game world
 	 * @param config Level configuration
+	 * @param uiBridge UI bridge
 	 */
 	constructor(
 		world: World,
-		config: LevelConfiguration
+		config: LevelConfiguration,
+		uiBridge: UIBridge | null = null
 	) {
-		super(world, config);
+		super(world, config, uiBridge);
 		this.difficulty = config.difficulty || 'medium';
 		console.log(`Created seesaw level with ${this.difficulty} difficulty`);
 	}
@@ -43,8 +46,8 @@ export class SeesawLevelController extends CourseLevelController {
 
 
 		this.setFinishArea(
-			{ x: 8, y: 0, z: 161 },
-			{ x: -8, y: 10, z: 181 }
+			{ x: 10, y: 1, z:46 },//225
+			{ x: -10, y: 5, z: 61 }//237	
 		);
 
 	}
@@ -158,14 +161,10 @@ export class SeesawLevelController extends CourseLevelController {
 		}
 	}
 
-	public startRound(players: Player[]): void {
+	public startRound(players: Player[], qualificationTarget: number): void {
+		super.startRound(players, qualificationTarget);
 		this.resetSeesaws();
-		console.log(`[SeesawLevelController] Starting round with ${players.length} players`);
-		setTimeout(() => {
-			const qualified = players.map(p => p.id);
-			const eliminated: string[] = [];
-			this.events.emit('RoundEnd', { q: qualified, e: eliminated });
-		}, 60000);
+		console.log(`[SeesawLevelController] Starting round with ${players.length} players. Target: ${qualificationTarget}`);
 	}
 
 	public cleanup(): void {

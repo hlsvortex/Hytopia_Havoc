@@ -4,6 +4,7 @@ import { type LevelConfiguration } from '../config/LevelConfiguration';
 import { SeesawLevelController } from '../levels/SeesawLevelController';
 import { GateCrashLevelController } from '../levels/GateCrashLevelController';
 import { gameConfig } from '../config/gameConfig';
+import { UIBridge } from './UIBridge';
 
 /**
  * Central manager for all game levels
@@ -14,13 +15,16 @@ export class LevelManager {
 	private players: Map<string, Player> = new Map();
 	private availableLevelConfigs: LevelConfiguration[];
 	private activeLevelController: LevelController | null = null;
+	private uiBridge: UIBridge | null = null;
 
 	/**
 	 * Create a new level manager
 	 * @param world The game world
+	 * @param uiBridge Optional initial UIBridge reference
 	 */
-	constructor(world: World) {
+	constructor(world: World, uiBridge: UIBridge | null = null) {
 		this.world = world;
+		this.uiBridge = uiBridge;
 		this.availableLevelConfigs = gameConfig.availableLevels;
 		console.log('[LevelManager] Created Level Manager');
 		
@@ -56,9 +60,9 @@ export class LevelManager {
 		let newController: LevelController;
 		try {
 			if (config.controller === SeesawLevelController || config.id === 'seesaw') {
-				newController = new SeesawLevelController(this.world, config);
+				newController = new SeesawLevelController(this.world, config, this.uiBridge);
 			} else if (config.controller === GateCrashLevelController || config.id === 'gatecrash') {
-				newController = new GateCrashLevelController(this.world, config);
+				newController = new GateCrashLevelController(this.world, config, this.uiBridge);
 			} else {
 				console.error(`[LevelManager] Unknown controller type configured for level ${config.id}`);
 				return null;
@@ -134,13 +138,13 @@ export class LevelManager {
 	/**
 	 * Start the current round using the active controller
 	 */
-	public startRound(players: Player[]): boolean {
+	public startRound(players: Player[], qualificationTarget: number): boolean {
 		if (!this.activeLevelController) {
 			console.error("[LevelManager] Cannot start round, no active level controller.");
 			return false;
 		}
 		console.log(`[LevelManager] Starting round on ${this.activeLevelController.getLevelName()} with ${players.length} players`);
-		this.activeLevelController.startRound(players);
+		this.activeLevelController.startRound(players, qualificationTarget);
 		return true;
 	}
 
@@ -174,16 +178,20 @@ export class LevelManager {
 	 * Clean up the active level controller and reset state
 	 */
 	public cleanup(): void {
+		console.log(`[LevelManager] Cleanup called.`);
 		if (this.activeLevelController) {
 			const levelName = this.activeLevelController.getLevelName();
-			console.log(`[LevelManager] Cleaning up active level controller: ${levelName}`);
+			const controllerClassName = this.activeLevelController.constructor.name;
+			console.log(`[LevelManager] Cleaning up active level controller: ${levelName} (${controllerClassName})`);
 			try {
 				this.activeLevelController.cleanup();
 			} catch(error) {
-				console.error(`[LevelManager] Error during cleanup of ${levelName}:`, error);
+				console.error(`[LevelManager] Error during cleanup call for ${levelName}:`, error);
 			}
 			this.activeLevelController = null;
-			console.log('[LevelManager] Active level controller cleaned up');
+			console.log(`[LevelManager] Active level controller nulled.`);
+		} else {
+			console.log(`[LevelManager] Cleanup called but no activeLevelController was set.`);
 		}
 	}
 
@@ -196,5 +204,14 @@ export class LevelManager {
 		this.players.clear();
 		this.loadAvailableLevels();
 		console.log('[LevelManager] LevelManager fully reset.');
+	}
+
+	/**
+	 * Allows setting/updating the UIBridge after construction.
+	 */
+	public setUIBridge(uiBridge: UIBridge): void {
+		this.uiBridge = uiBridge;
+		console.log('[LevelManager] UIBridge linked.');
+		this.levelControllers.forEach(controller => controller.setUIBridge(this.uiBridge));
 	}
 } 

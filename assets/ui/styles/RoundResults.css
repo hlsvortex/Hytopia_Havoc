@@ -1,0 +1,87 @@
+.round-results-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex; /* Use flex for centering content */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-family: 'Arial', sans-serif;
+    z-index: 200; /* High z-index */
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.results-header {
+    font-size: 48px;
+    font-weight: bold;
+    margin-bottom: 30px;
+    text-transform: uppercase;
+    color: #FFD700; /* Gold color */
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.results-columns {
+    display: flex;
+    justify-content: center; /* Center columns */
+    width: 80%; /* Adjust width as needed */
+    max-width: 800px;
+}
+
+.results-column {
+    flex: 1; /* Equal width columns */
+    padding: 0 20px;
+    text-align: center;
+}
+
+.column-header {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    padding-bottom: 5px;
+    border-bottom: 2px solid white;
+}
+
+.qualified-column .column-header {
+    color: #4CAF50; /* Green */
+    border-bottom-color: #4CAF50;
+}
+
+.eliminated-column .column-header {
+    color: #F44336; /* Red */
+     border-bottom-color: #F44336;
+}
+
+.player-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 40vh; /* Limit height */
+    overflow-y: auto; /* Add scroll if needed */
+}
+
+.player-item {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    font-size: 18px;
+    transition: background-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
+}
+
+.eliminated-list .player-item.initial {
+    background-color: rgba(255, 255, 255, 0.1); /* Start neutral */
+    color: white;
+}
+
+.eliminated-list .player-item.eliminated {
+    background-color: rgba(244, 67, 54, 0.7); /* Red background */
+    color: #ffebee; /* Lighter red text */
+    transform: scale(1.02); /* Slight scale effect */
+    text-decoration: line-through;
+} 

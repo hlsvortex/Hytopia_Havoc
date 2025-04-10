@@ -156,6 +156,10 @@ export default class MyEntityController extends BaseEntityController {
 			relativePosition: { x: 0, y: -0.9, z: 0 },
 			tag: 'groundSensor',
 			onCollision: (_other: BlockType | Entity, started: boolean) => {
+
+				if (!entity.isSpawned) {
+					return;
+				}
 				// Ground contact
 				this._groundContactCount += started ? 1 : -1;
 
@@ -187,7 +191,7 @@ export default class MyEntityController extends BaseEntityController {
 				belongsTo: [CollisionGroup.ENTITY_SENSOR],
 				collidesWith: [CollisionGroup.BLOCK, CollisionGroup.ENTITY],
 			},
-			friction: 0,
+			friction: 0.1,
 			frictionCombineRule: CoefficientCombineRule.Min,
 			tag: 'wallCollider',
 		});

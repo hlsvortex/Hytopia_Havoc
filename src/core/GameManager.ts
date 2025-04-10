@@ -1,4 +1,4 @@
-import { World, Player, PlayerEvent, PlayerCameraMode, EntityEvent, PlayerUIEvent, Entity, PlayerEntity } from 'hytopia';
+import { World, Player, PlayerEvent, PlayerCameraMode, EntityEvent, PlayerUIEvent, Entity, PlayerEntity, ColliderShape, CollisionGroup } from 'hytopia';
 import { EventEmitter } from '../utils/EventEmitter';
 import { RoundManager } from './RoundManager';
 import { gameConfig } from '../config/gameConfig';
@@ -6,6 +6,7 @@ import { LevelManager } from './LevelManager';
 import { UIBridge } from './UIBridge';
 import PlayerController from '../PlayerController';
 import { CourseLevelController } from './CourseLevelController';
+import { LevelController } from './LevelController'; // Import base LevelController
 
 type GameState = 'Lobby' | 'Starting' | 'RoundInProgress' | 'PostRound' | 'GameOver';
 
@@ -17,6 +18,11 @@ export class GameManager {
 	private roundManager: RoundManager | null = null;
 	public levelManager: LevelManager;
 	private uiBridge: UIBridge | null = null;
+	private currentQualificationTarget: number = 0;
+	// Store listener reference for cleanup
+	private boundHandleLevelRoundEnd: (data: { q: string[], e: string[] }) => void;
+	private boundHandleBeforeRoundTransition: (data: { nextLevelId: string | null, qualifiedPlayers: string[] }) => void;
+	
 	public events = new EventEmitter<{
 		GameWon: string;
 		GameEnded: string;
@@ -24,7 +30,9 @@ export class GameManager {
 
 	constructor(world: World) {
 		this.world = world;
-		this.levelManager = new LevelManager(world);
+		this.levelManager = new LevelManager(world, this.uiBridge);
+		this.boundHandleLevelRoundEnd = this.handleLevelRoundEnd.bind(this);
+		this.boundHandleBeforeRoundTransition = this.handleBeforeRoundTransition.bind(this);
 		console.log('[GameManager] Initialized in Lobby state.');
 		this.registerHytopiaListeners();
 	}
@@ -32,6 +40,9 @@ export class GameManager {
 	public setUIBridge(uiBridge: UIBridge): void {
 		this.uiBridge = uiBridge;
 		console.log('[GameManager] UIBridge linked.');
+		if(this.levelManager) {
+			this.levelManager.setUIBridge(uiBridge);
+		}
 	}
 
 	public getGameState(): GameState {
@@ -126,10 +137,8 @@ export class GameManager {
 	}
 
 	private spawnPlayerInGame(player: Player): void {
-		if (this.playerEntities.has(player.id)) {
-			console.warn(`[GameManager] Attempted to spawn player ${player.id} who already has an entity.`);
-			return;
-		}
+		// Called by prepareRound
+		console.log(`[GameManager] Spawning player ${player.id} in game`);
 		
 		// --- Get Spawn Point from Active Level Controller --- 
 		const activeLevelController = this.levelManager.getActiveLevelController();
@@ -162,13 +171,41 @@ export class GameManager {
 			modelLoopedAnimations: ['idle'],
 			modelScale: 0.61,
 			controller: playerController,
+		    // Define collision groups for the player entity
+		    rigidBodyOptions: {
+		        // Add other rigid body options if needed (e.g., mass, friction)
+		        colliders: [
+		            {
+		                // Define the main player collider shape (e.g., capsule)
+		                 shape: ColliderShape.CAPSULE, // Or BOX, etc.
+                         halfHeight: 0.6, // Example value
+                         radius: 0.4,    // Example value
+		                 collisionGroups: {
+		                    belongsTo: [CollisionGroup.PLAYER],
+		                    collidesWith: [
+		                        CollisionGroup.ENTITY_SENSOR,  // Ensure it collides with sensors
+		                      ]
+		                }
+		            }
+		        ]
+		    }
 		});
 		
+		playerEntity.setCollisionGroupsForSensorColliders({
+			belongsTo: [CollisionGroup.PLAYER],
+			collidesWith: [
+				CollisionGroup.ENTITY,
+				CollisionGroup.ENTITY_SENSOR,  // Ensure it collides with sensors
+				CollisionGroup.PLAYER,
+				CollisionGroup.BLOCK
+			]
+		});
+
 		// Spawn at the determined spawn point
 		playerEntity.spawn(this.world, spawnPoint); 
-		// console.log(`[GameManager] Spawned entity for ${player.id} at ${JSON.stringify(spawnPoint)}`); // Log moved up
 		this.playerEntities.set(player.id, playerEntity);
 
+		// DO NOT CHANGE THIS CODE - IT IS CORRECT
 		player.camera.setMode(PlayerCameraMode.FIRST_PERSON);
 		player.camera.setForwardOffset(-6); 
 		player.camera.setOffset({ x: 0, y: 2, z: 0 });
@@ -187,8 +224,7 @@ export class GameManager {
 				return;
 			}
 			if (playerEntity.position.y < fallThreshold) {
-			    // --- Get Checkpoint Respawn --- 
-			    let respawnPoint = spawnPoint; // Default to initial spawn
+			    let respawnPoint = spawnPoint; 
 			    if (activeLevelController && activeLevelController instanceof CourseLevelController) {
 			        const courseController = activeLevelController as CourseLevelController;
 			        const checkpointSpawn = courseController.getCheckpointRespawnPosition(playerEntity.position);
@@ -196,9 +232,7 @@ export class GameManager {
 			            respawnPoint = checkpointSpawn;
 			        }
 			    }
-			     // Pass the calculated respawn point to handleFall
 			    playerController.handleFall(playerEntity, respawnPoint); 
-			     // --- End Get Checkpoint Respawn ---
 			}
 		};
 		this.world.on(EntityEvent.TICK, tickListener);
@@ -222,7 +256,11 @@ export class GameManager {
 			id: level.id,
 			name: level.displayName,
 			description: `${level.levelType} round - ${level.difficulty} difficulty`,
-			image: `level_${level.id}.jpg`
+			image: `level_${level.id}.jpg`,
+            // Include other relevant data for UI if needed
+            minPlayers: level.minPlayers,
+            maxPlayers: level.maxPlayers,
+            qualificationSlotsRatio: level.qualificationSlotsRatio
 		}));
 		
 		this.players.forEach(player => {
@@ -248,27 +286,84 @@ export class GameManager {
 			this.endGame('FailedToActivateLevel');
 			return;
 		}
-		console.log(`[GameManager] 3. Level ${levelId} activated successfully.`);
+        console.log(`[GameManager] 3. Level ${levelId} activated successfully.`);
 
-		// Initialize RoundManager if it doesn't exist (first round)
-		if (!this.roundManager) {
-			const initialPlayerIds = Array.from(this.players.keys());
-			this.roundManager = new RoundManager(this.world, initialPlayerIds, this.levelManager);
-			this.roundManager.events.on('GameEndConditionMet', this.handleGameEndConditionMet.bind(this));
-			console.log('[GameManager] 4. Round Manager initialized.');
-		} else {
-			 console.log('[GameManager] 4. Round Manager already exists (likely next round).');
-		}
+        // --- Calculate Qualification Target --- 
+        const config = this.levelManager.getLevelConfigById(levelId);
+        const playerCount = this.players.size;
+        this.currentQualificationTarget = playerCount; 
 
-		// Spawn players into the new level
-		console.log(`[GameManager] 5. Spawning ${this.players.size} players for round...`);
-		this.players.forEach(player => {
-			this.spawnPlayerInGame(player); // Spawn player entities
-		});
-		console.log(`[GameManager] 6. Finished spawning players for level ${levelId}. Ready for gameplay start.`);
-		
-		// Set state to RoundInProgress AFTER spawning is done
-		this.state = 'RoundInProgress';
+        if (config) {
+            // Force a final round configuration when only 2 players remain
+            const onlyTwoPlayersRemain = this.roundManager?.getActivePlayerIds().length === 2;
+            const isFinalRound = config.isFinalRound || onlyTwoPlayersRemain;
+            
+            if (isFinalRound) {
+                this.currentQualificationTarget = 1;
+                console.log(`[GameManager] Level ${levelId} is ${onlyTwoPlayersRemain ? 'treating as FINAL round (2 players)' : 'FINAL round'}. Qualification target: ${this.currentQualificationTarget}`);
+            } else {
+                const ratio = config.qualificationSlotsRatio ?? 0.6; 
+                this.currentQualificationTarget = Math.max(1, Math.ceil(playerCount * ratio));
+                console.log(`[GameManager] Level ${levelId} uses ratio ${ratio}. Player count: ${playerCount}. Qualification target: ${this.currentQualificationTarget}`);
+            }
+        } else {
+             console.warn(`[GameManager] Could not find config for level ${levelId} to calculate qualification target. Defaulting to all players.`);
+             this.currentQualificationTarget = playerCount; 
+        }
+        // --- End Calculation --- 
+
+        // Initialize RoundManager if it doesn't exist (first round)
+        if (!this.roundManager) {
+            const initialPlayerIds = Array.from(this.players.keys());
+            this.roundManager = new RoundManager(this.world, initialPlayerIds, this.levelManager); 
+            // Subscribe to RoundManager events
+            this.roundManager.events.on('GameEndConditionMet', this.handleGameEndConditionMet.bind(this)); 
+            this.roundManager.events.on('BeforeRoundTransition', this.boundHandleBeforeRoundTransition); // Use bound handler
+            console.log('[GameManager] 4. Round Manager initialized and listeners attached.');
+        } else {
+             console.log('[GameManager] 4. Round Manager already exists (likely next round).');
+        }
+
+        // Get active (qualified) player IDs from the RoundManager
+        const activePlayerIds = this.roundManager?.getActivePlayerIds() || [];
+        const eliminatedPlayerIds = this.roundManager?.getEliminatedPlayerIds() || [];
+        
+        console.log(`[GameManager] 5. Active players: ${activePlayerIds.length}, Eliminated players: ${eliminatedPlayerIds.length}`);
+
+        // Spawn only active (non-eliminated) players into the new level
+        console.log(`[GameManager] 6. Spawning ${activePlayerIds.length} active players for round...`);
+        
+        // First despawn any existing player entities to prevent duplicates
+        this.playerEntities.forEach((entity, playerId) => {
+            if (entity.isSpawned) {
+                console.log(`[GameManager] Despawning existing entity for player ${playerId}`);
+                entity.despawn();
+            }
+        });
+        this.playerEntities.clear();
+        
+        // Now spawn only the active players
+        activePlayerIds.forEach(playerId => {
+            const player = this.players.get(playerId);
+            if (player) {
+                this.spawnPlayerInGame(player);
+            }
+        });
+        
+        // Set eliminated players to spectator mode
+        eliminatedPlayerIds.forEach(playerId => {
+            const player = this.players.get(playerId);
+            if (player) {
+                console.log(`[GameManager] Setting eliminated player ${playerId} to spectator mode`);
+                player.camera.setMode(PlayerCameraMode.SPECTATOR);
+                this.uiBridge?.closeMenu(player);
+            }
+        });
+        
+        console.log(`[GameManager] 7. Finished spawning players for level ${levelId}. Ready for gameplay start.`);
+        
+        // Set state to RoundInProgress AFTER spawning is done
+        this.state = 'RoundInProgress';
 	}
 	
 	/** 
@@ -282,33 +377,190 @@ export class GameManager {
 			return; 
 		}
 		
-		// Show HUD for all players
-		console.log('[GameManager] Showing HUD for all players.');
+		// --- Show & Update HUD for all players --- 
+		console.log('[GameManager] Showing & Initializing HUD for all players.');
+		const activeLevelController = this.levelManager.getActiveLevelController();
+		const activeLevelConfig = activeLevelController ? this.levelManager.getLevelConfigById(activeLevelController.getConfigId()) : null;
+		const initialHudData = {
+		    goal: activeLevelConfig?.displayName ?? "Survive!",
+		    statusLabel: "QUALIFIED",
+		    currentCount: 0,
+		    totalCount: this.currentQualificationTarget,
+		    timer: null 
+		};
+		
 		this.players.forEach(player => {
 			this.uiBridge?.showHud(player);
+			this.uiBridge?.updateHud(player, initialHudData);
 		});
+		// --- End Show & Update HUD ---
 		
-		// Start the round logic via LevelManager, passing the current players
+		// Start the round logic via LevelManager
 		console.log(`[GameManager] 8. Attempting to start round gameplay via LevelManager with ${this.players.size} players.`);
-		if (this.levelManager.startRound(this.getPlayers())) { // Pass players map 
+		if (this.levelManager.startRound(this.getPlayers(), this.currentQualificationTarget)) { 
 			console.log(`[GameManager] 9. Round gameplay started successfully.`);
+            
+            // Subscribe GameManager and RoundManager to level end event AFTER round starts
+            if (activeLevelController) {
+                console.log(`[GameManager] Subscribing GameManager to RoundEnd event of ${activeLevelController.getLevelName()}`);
+                activeLevelController.events.on('RoundEnd', this.boundHandleLevelRoundEnd);
+                this.roundManager?.subscribeToActiveLevelEndEvent(); // Tell RoundManager to subscribe too
+            } else {
+                 console.error("[GameManager] Cannot subscribe to level end: No active controller after startRound!");
+                 this.endGame('MissingControllerPostStart');
+            }
 		} else {
 			console.error(`[GameManager] LevelManager failed to start round gameplay. Ending game.`);
-			this.endGame('FailedToStartRoundGameplay');
+			this.endGame('FailedToStartRoundGameplay'); 
 		}
+	}
+
+	private getPlayerName(playerId: string): string {
+		// Use player ID as name for now
+		return playerId;
+	}
+
+	private handleLevelRoundEnd(data: { q: string[], e: string[] }): void {
+		console.log(`[GameManager] Received RoundEnd event from LevelController.`);
+		
+		this.uiBridge?.broadcastAnimatedText("ROUND", "OVER!"); // Default 3s duration
+		
+		if (!this.roundManager) {
+			console.error("[GameManager] Round ended but RoundManager is missing!");
+			this.endGame('RoundManagerMissingOnRoundEnd');
+			return;
+		}
+		
+		const shouldContinue = this.roundManager.processRoundResults(data);
+		
+		// Prepare player lists for UI using correct event data
+		const qualifiedNames = data.q.map(id => this.getPlayerName(id));
+		const eliminatedNames = data.e.map(id => this.getPlayerName(id)); 
+
+		// Despawn remaining players (those in 'e')
+		console.log("[GameManager] Despawning eliminated player entities...");
+		this.playerEntities.forEach((entity, playerId) => {
+			if (entity.isSpawned && data.e.includes(playerId)) { // Check if player ID is in eliminated list
+				console.log(`[GameManager] Despawning eliminated player ${playerId}`);
+				try {
+					entity.player?.camera.setMode(PlayerCameraMode.SPECTATOR); 
+					entity.despawn();
+				 } catch(e) {
+					 console.error(`[GameManager] Error despawning player ${playerId} on round end:`, e);
+				 }
+			}
+		});
+		// Remove despawned entities from the map
+		data.e.forEach(playerId => this.playerEntities.delete(playerId));
+		// Qualified players should have already been despawned with a delay by handlePlayerFinished
+		// Clear remaining qualified players from map too, just in case delay overlaps
+		data.q.forEach(playerId => this.playerEntities.delete(playerId));
+
+		// Check if game ended based on results
+		if (!shouldContinue) {
+			console.log("[GameManager] Round results indicate game should end. (Winner/Max Rounds)");
+			setTimeout(() => {
+				 if (this.state === 'GameOver') return;
+				 console.log("[GameManager] Broadcasting final round results UI.");
+				 this.uiBridge?.broadcastRoundResults(qualifiedNames, eliminatedNames);
+				 // handleGameEndConditionMet handles full endGame call
+			}, 3000); 
+			return; 
+		}
+		
+		// Game continues: Show results, wait, then trigger next round logic 
+		console.log("[GameManager] Game continues. Showing results, then starting next round logic...");
+		const eliminationAnimTime = (eliminatedNames.length * 300); 
+		const baseResultsDisplayTime = 5000; 
+		const resultsDisplayDuration = Math.max(baseResultsDisplayTime, eliminationAnimTime) + 500; 
+		const transitionDelay = 3000; 
+
+		// Show Results Panel after ROUND OVER text
+		setTimeout(() => {
+			if (this.state === 'GameOver') return; 
+			console.log("[GameManager] Broadcasting round results UI.");
+			this.uiBridge?.broadcastRoundResults(qualifiedNames, eliminatedNames);
+		}, transitionDelay); 
+
+		// Start next round logic AFTER results panel duration
+		setTimeout(() => {
+			if (this.state === 'GameOver') return; 
+			
+			 console.log("[GameManager] Cleaning up finished level and preparing for next round.");
+			 const finishedLevelController = this.levelManager.getActiveLevelController(); 
+			 if (finishedLevelController) {
+				finishedLevelController.events.off('RoundEnd', this.boundHandleLevelRoundEnd);
+			 }
+			 this.roundManager?.unsubscribeFromActiveLevelEndEvent();
+			 this.levelManager.cleanup();
+			 
+			 this.state = 'PostRound'; 
+			 console.log("[GameManager] Triggering next round selection.");
+			 this.roundManager?.startNextRoundLogic(); // This emits BeforeRoundTransition
+
+		}, transitionDelay + resultsDisplayDuration); 
 	}
 
 	private handleGameEndConditionMet(reason: string): void {
 		console.log(`[GameManager] GameEndConditionMet event received: ${reason}`);
+		if (this.state === 'GameOver') return; // Avoid double-ending
+		
 		if (reason === 'LastPlayerStanding' && this.roundManager) {
 			const winnerId = this.roundManager.getLastPlayerId();
 			if (winnerId) {
-				const winnerPlayer = this.players.get(winnerId);
+				// const winnerPlayer = this.players.get(winnerId); // Get player if needed
 				console.log(`[GameManager] Winner detected: ${winnerId}`);
-				this.events.emit('GameWon', winnerId);
+				this.events.emit('GameWon', winnerId); 
 			}
 		}
+		
+		// Make sure HUD is hidden for all players
+		this.players.forEach(player => {
+			this.uiBridge?.hideHud(player);
+		});
+		
+		// Always end the game when this event occurs
 		this.endGame(reason);
+	}
+
+	private handleBeforeRoundTransition(data: { nextLevelId: string | null, qualifiedPlayers: string[] }): void {
+		console.log(`[GameManager] Received BeforeRoundTransition. Next Level ID: ${data.nextLevelId}`);
+		
+		if (!data.nextLevelId) {
+			console.error("[GameManager] BeforeRoundTransition received null level ID. Cannot proceed.");
+			this.endGame('NoNextLevelSelected');
+			return;
+		}
+		
+		// Close HUD and round results UI for all players before showing level select
+		console.log("[GameManager] Closing HUD and round results before showing level select");
+		this.players.forEach(player => {
+			// Hide HUD
+			this.uiBridge?.hideHud(player);
+			// Close round results panel
+			this.uiBridge?.closeRoundResults(player);
+		});
+		
+		// Prepare level list for UI (same as in startGame, maybe refactor later)
+		const levelList = gameConfig.availableLevels.map(level => ({
+			id: level.id,
+			name: level.displayName,
+			description: `${level.levelType} round - ${level.difficulty} difficulty`,
+			image: `level_${level.id}.jpg`,
+            minPlayers: level.minPlayers,
+            maxPlayers: level.maxPlayers,
+            qualificationSlotsRatio: level.qualificationSlotsRatio
+		}));
+		
+		// Show Level Select UI to all currently connected players
+		// (RoundManager has already filtered based on qualified players for level selection)
+		console.log("[GameManager] Showing Level Select for next round.");
+		this.players.forEach(player => {
+			this.uiBridge?.showLevelSelect(player, levelList);
+		});
+		
+		// Set state back to Starting, ready for UI selection
+		this.state = 'Starting'; 
 	}
 
 	public endGame(reason: string): void {
@@ -316,29 +568,50 @@ export class GameManager {
 		console.log(`[GameManager] Ending game. Reason: ${reason}`);
 		const previousState = this.state;
 		this.state = 'GameOver';
-		if (this.roundManager) {
-			this.roundManager.events.off('GameEndConditionMet', this.handleGameEndConditionMet.bind(this));
-			this.roundManager.cleanup();
-			this.roundManager = null;
-		}
+
+        // Unsubscribe from RoundManager events
+        if (this.roundManager) {
+             this.roundManager.events.off('GameEndConditionMet', this.handleGameEndConditionMet.bind(this));
+             this.roundManager.events.off('BeforeRoundTransition', this.boundHandleBeforeRoundTransition);
+             this.roundManager.cleanup(); 
+             this.roundManager = null;
+        }
+        
+        // Unsubscribe GameManager from Level End event before cleaning LevelManager
+        const activeLevelController = this.levelManager.getActiveLevelController();
+        if (activeLevelController) {
+            console.log(`[GameManager] endGame: Unsubscribing from RoundEnd of ${activeLevelController.getLevelName()}`);
+            activeLevelController.events.off('RoundEnd', this.boundHandleLevelRoundEnd);
+        }
+        // Also tell RoundManager to unsubscribe its listener if it exists
+        // This might be redundant if roundManager cleanup handles it, but safe.
+        // this.roundManager?.unsubscribeFromActiveLevelEndEvent(); 
+        
+        // Cleanup LevelManager (cleans active level controller)
 		if (this.levelManager) {
 			this.levelManager.cleanup();
 		}
 		
+        // Despawn player entities
 		console.log(`[GameManager] Despawning ${this.playerEntities.size} player entities.`);
 		this.playerEntities.forEach(entity => {
 			if (entity.isSpawned) entity.despawn();
 		});
 		this.playerEntities.clear();
 		
+        // Emit event and notify players
 		this.events.emit('GameEnded', reason);
 		this.world.chatManager.sendBroadcastMessage(`Game Over! Reason: ${reason}`);
-		console.log("[GameManager] Game Over. Resetting to Lobby state.");
+		console.log("[GameManager] Game Over. Resetting players and state to Lobby.");
 		
 		this.players.forEach(player => {
-			player.camera.setMode(PlayerCameraMode.SPECTATOR);
-			this.uiBridge?.showMainMenu(player);
+			// Ensure UI elements are closed/hidden
+			this.uiBridge?.hideHud(player);
+			this.uiBridge?.closeRoundResults(player);
+
+			player.camera.setMode(PlayerCameraMode.SPECTATOR); 
+			this.uiBridge?.showMainMenu(player); 
 		});
-		this.state = 'Lobby';
+		this.state = 'Lobby'; 
 	}
-} 
+}

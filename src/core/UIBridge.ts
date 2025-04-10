@@ -132,6 +132,29 @@ export class UIBridge {
         this.sendDataToPlayer(player, { type: 'HIDE_HUD' });
     }
     
+    // Added method to update the HUD data
+    public updateHud(player: Player, hudData: object): void {
+        this.sendDataToPlayer(player, { type: 'UPDATE_HUD', hudData });
+    }
+    
+    // Added method to show round results
+    public showRoundResults(player: Player, qualifiedNames: string[], eliminatedNames: string[]): void {
+         this.sendDataToPlayer(player, {
+             type: 'SHOW_ROUND_RESULTS',
+             qualifiedPlayers: qualifiedNames,
+             eliminatedPlayers: eliminatedNames
+         });
+    }
+    
+    // Method to broadcast round results
+     public broadcastRoundResults(qualifiedNames: string[], eliminatedNames: string[]): void {
+         this.broadcastData({
+             type: 'SHOW_ROUND_RESULTS',
+             qualifiedPlayers: qualifiedNames,
+             eliminatedPlayers: eliminatedNames
+         });
+     }
+	
     // Added method to show animated text
     public showAnimatedText(player: Player, line1: string, line2: string, duration: number = 3000): void {
          this.sendDataToPlayer(player, { type: 'SHOW_ANIMATED_TEXT', textLine1: line1, textLine2: line2, duration });
@@ -140,5 +163,10 @@ export class UIBridge {
      // Added method to broadcast animated text
     public broadcastAnimatedText(line1: string, line2: string, duration: number = 3000): void {
          this.broadcastData({ type: 'SHOW_ANIMATED_TEXT', textLine1: line1, textLine2: line2, duration });
+    }
+
+    // Added method to close the round results panel
+    public closeRoundResults(player: Player): void {
+        this.sendDataToPlayer(player, { type: 'CLOSE_ROUND_RESULTS' });
     }
 } 

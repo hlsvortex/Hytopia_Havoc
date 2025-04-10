@@ -4,19 +4,36 @@ import { type LevelConfiguration } from '../config/LevelConfiguration';
 import { EventEmitter } from '../utils/EventEmitter';
 import * as fs from 'fs';
 import * as path from 'path';
+import { UIBridge } from './UIBridge';
 
 export abstract class LevelController {
     protected world: World;
     protected config: LevelConfiguration;
     protected currentMapData: any = null;
+    protected uiBridge: UIBridge | null = null;
     
     public events = new EventEmitter<{
         RoundEnd: { q: string[], e: string[] }
     }>();
     
-    constructor(world: World, config: LevelConfiguration) {
+    constructor(world: World, config: LevelConfiguration, uiBridge: UIBridge | null = null) {
         this.world = world;
         this.config = config;
+        this.uiBridge = uiBridge;
+    }
+    
+    /**
+     * Allows setting/updating the UIBridge after construction.
+     */
+    public setUIBridge(uiBridge: UIBridge | null): void {
+        this.uiBridge = uiBridge;
+    }
+    
+    /**
+     * Get the level's configuration ID
+     */
+    public getConfigId(): string {
+        return this.config.id;
     }
     
     /**
@@ -162,5 +179,11 @@ export abstract class LevelController {
         console.log(`[LevelController] *** CLEANUP COMPLETE for ${this.getLevelName()} ***`);
     }
     
-    abstract startRound(players: Player[]): void;
+    /**
+     * Starts the round for this level.
+     * Subclasses must implement this.
+     * @param players List of players participating.
+     * @param qualificationTarget Number of players needed to qualify.
+     */
+    abstract startRound(players: Player[], qualificationTarget: number): void;
 } 

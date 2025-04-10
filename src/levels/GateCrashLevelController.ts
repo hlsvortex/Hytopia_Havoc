@@ -3,6 +3,7 @@ import { World, PlayerEntity, Entity, type Vector3Like, Player } from 'hytopia';
 import { CourseLevelController } from '../core/CourseLevelController';
 import { CrashWallObstacle, type CrashWallObstacleOptions } from '../obsticals/CrashWallObstacle';
 import { type LevelConfiguration } from '../config/LevelConfiguration';
+import { UIBridge } from '../core/UIBridge';
 
 /**
  * Specialized level controller for gate crash obstacle course levels
@@ -21,9 +22,10 @@ export class GateCrashLevelController extends CourseLevelController {
      * Create a new gate crash level controller
      * @param world Game world
      * @param config Level configuration
+     * @param uiBridge UI bridge (optional)
      */
-    constructor(world: World, config: LevelConfiguration) {
-        super(world, config);
+    constructor(world: World, config: LevelConfiguration, uiBridge: UIBridge | null = null) {
+        super(world, config, uiBridge);
         this.difficulty = config.difficulty || 'medium';
         console.log(`Created gate crash level with ${this.difficulty} difficulty`);
     }
@@ -44,8 +46,8 @@ export class GateCrashLevelController extends CourseLevelController {
         
         
         this.setFinishArea(
-            { x: 8, y: 0, z: 161 }, 
-            { x: -8, y: 10, z: 181 }
+            { x: 8, y: 0, z: 161-100 }, 
+            { x: -8, y: 10, z: 181-100 }
         );
         
         // TODO: Add Checkpoint Areas if needed
@@ -191,16 +193,18 @@ export class GateCrashLevelController extends CourseLevelController {
         }
     }
 
-    public startRound(players: Player[]): void {
+    public startRound(players: Player[], qualificationTarget: number): void {
+        super.startRound(players, qualificationTarget);
         this.resetCourse();
-        console.log(`[GateCrash] Round started with ${players.length} players`);
+        console.log(`[GateCrash] Round started with ${players.length} players. Target: ${qualificationTarget}`);
         
-        // Trigger round end after a delay (temporary)
-        setTimeout(() => {
-            const qualified = players.map(p => p.id);
-            const eliminated: string[] = [];
-            this.events.emit('RoundEnd', { q: qualified, e: eliminated });
-        }, 60000); // 1 minute round
+        // TODO: Implement actual round end condition based on finished players
+		// Temporary timer removed, round end triggered by handlePlayerFinished
+        // setTimeout(() => {
+        //     const qualified = players.map(p => p.id);
+        //     const eliminated: string[] = [];
+        //     this.events.emit('RoundEnd', { q: qualified, e: eliminated });
+        // }, 60000); 
     }
     
     public cleanup(): void {

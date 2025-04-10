@@ -77,6 +77,10 @@ export class UIBridge {
                  console.log('[UIBridge] ROUND_READY received. Telling GameManager to begin gameplay.');
                  this.gameManager.beginRoundGameplay(); 
                  break;
+            case 'SUMMARY_CONTINUE': // New Action
+                 console.log('[UIBridge] SUMMARY_CONTINUE received. Player has finished viewing their summary.');
+                 this.gameManager.handleSummaryContinue();
+                 break;
             case 'START_GAME': // Keep for potential future use
                 console.log('[UIBridge] START_GAME action received but not yet implemented via UI.');
                 break;
@@ -163,6 +167,50 @@ export class UIBridge {
      // Added method to broadcast animated text
     public broadcastAnimatedText(line1: string, line2: string, duration: number = 3000): void {
          this.broadcastData({ type: 'SHOW_ANIMATED_TEXT', textLine1: line1, textLine2: line2, duration });
+    }
+
+    // Added method to show the player summary screen
+    public showPlayerSummary(player: Player, summaryData: {
+        placement: number,
+        coinsEarned: number,
+        crownsEarned: number,
+        totalPlayers: number,
+        roundsPlayed: number
+    }): void {
+        this.sendDataToPlayer(player, { 
+            type: 'SHOW_PLAYER_SUMMARY',
+            ...summaryData
+        });
+    }
+    
+    // Added method to close the player summary screen
+    public closePlayerSummary(player: Player): void {
+        this.sendDataToPlayer(player, { type: 'CLOSE_PLAYER_SUMMARY' });
+    }
+    
+    // Added method to broadcast player summary screen close
+    public broadcastClosePlayerSummary(): void {
+        this.broadcastData({ type: 'CLOSE_PLAYER_SUMMARY' });
+    }
+
+    // Added method to show the winner screen
+    public showWinner(player: Player, winnerName: string): void {
+        this.sendDataToPlayer(player, { type: 'SHOW_WINNER', winnerName });
+    }
+    
+    // Added method to broadcast winner
+    public broadcastWinner(winnerName: string): void {
+        this.broadcastData({ type: 'SHOW_WINNER', winnerName });
+    }
+    
+    // Added method to close the winner screen
+    public closeWinner(player: Player): void {
+        this.sendDataToPlayer(player, { type: 'CLOSE_WINNER' });
+    }
+    
+    // Added method to close the winner screen for all players
+    public broadcastCloseWinner(): void {
+        this.broadcastData({ type: 'CLOSE_WINNER' });
     }
 
     // Added method to close the round results panel

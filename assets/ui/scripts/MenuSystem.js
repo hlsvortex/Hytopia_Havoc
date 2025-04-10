@@ -5,6 +5,8 @@ import LevelSelectPanel from './panels/LevelSelectPanel.js';
 import HudPanel from './panels/HudPanel.js';
 import AnimatedTextPanel from './panels/AnimatedTextPanel.js';
 import RoundResultsPanel from './panels/RoundResultsPanel.js';
+import WinnerPanel from './panels/WinnerPanel.js';
+import PlayerSummaryPanel from './panels/PlayerSummaryPanel.js';
 
 export class MenuSystem {
     constructor() {
@@ -68,6 +70,18 @@ export class MenuSystem {
         this.registerPanel(
             MenuType.ROUND_RESULTS,
             new RoundResultsPanel()
+        );
+        
+        // Register Winner Panel
+        this.registerPanel(
+            MenuType.WIN_SCREEN,
+            new WinnerPanel()
+        );
+        
+        // Register Player Summary Panel
+        this.registerPanel(
+            MenuType.PLAYER_SUMMARY,
+            new PlayerSummaryPanel()
         );
 	
 		/*

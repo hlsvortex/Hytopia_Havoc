@@ -54,7 +54,7 @@ export class RoundManager {
         let currentExcludeIds = Array.from(this.usedLevelIds);
         if (currentExcludeIds.length >= availableConfigs.length) {
              console.warn(`[RoundManager] Used all levels, allowing reuse.`);
-             this.usedLevelIds.clear();
+                this.usedLevelIds.clear();
              currentExcludeIds = [];
         } else if (currentExcludeIds.length === availableConfigs.length -1) {
              const lastUnused = availableConfigs.find(c => !this.usedLevelIds.has(c.id));
@@ -84,8 +84,8 @@ export class RoundManager {
         
         if (eligibleLevels.length === 0) {
              console.error(`[RoundManager] No eligible levels found for round ${this.currentRound} with ${this.activePlayerIds.length} players. Filters: exclude=[${currentExcludeIds.join(',')}], isFinal=${isFinalRound}`);
-             this.events.emit('GameEndConditionMet', 'NoSuitableLevels');
-             return;
+            this.events.emit('GameEndConditionMet', 'NoSuitableLevels');
+            return;
         }
         
         const randomIndex = Math.floor(Math.random() * eligibleLevels.length);
@@ -120,7 +120,7 @@ export class RoundManager {
             qualifiedPlayers: data.q, 
             eliminatedPlayers: data.e 
         });
-
+        
         // Check game end conditions based on remaining players
         if (this.activePlayerIds.length <= 1 && this.currentRound >= 1) { 
             console.log('[RoundManager] Game end condition met after round results: LastPlayerStanding');
@@ -261,8 +261,8 @@ export class RoundManager {
              // Log silently if no controller, might happen during shutdown
              // console.log("[RoundManager] Cannot unsubscribe from level end event: No active level controller.");
         }
-     }
-
+    }
+    
     cleanup(): void {
         console.log('[RoundManager] Cleaning up');
         this.currentRound = 0;

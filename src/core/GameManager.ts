@@ -10,6 +10,15 @@ import { LevelController } from './LevelController'; // Import base LevelControl
 
 type GameState = 'Lobby' | 'Starting' | 'RoundInProgress' | 'PostRound' | 'GameOver';
 
+/**
+ * Reward calculator for player placement
+ */
+interface PlayerReward {
+    placement: number;
+    coins: number;
+    crowns: number;
+}
+
 export class GameManager {
 	private world: World;
 	private state: GameState = 'Lobby';
@@ -22,6 +31,7 @@ export class GameManager {
 	// Store listener reference for cleanup
 	private boundHandleLevelRoundEnd: (data: { q: string[], e: string[] }) => void;
 	private boundHandleBeforeRoundTransition: (data: { nextLevelId: string | null, qualifiedPlayers: string[] }) => void;
+	private currentRound: number = 0; // Track the round number
 	
 	public events = new EventEmitter<{
 		GameWon: string;
@@ -273,8 +283,11 @@ export class GameManager {
 	 * Activates the level and spawns players.
 	 */
 	public prepareRound(levelId: string): void {
-		console.log(`[GameManager] 1. Preparing round for level: ${levelId}`);
-		 if (this.state !== 'Starting' && this.state !== 'PostRound') { 
+		// Increment the round counter
+		this.currentRound++;
+		console.log(`[GameManager] 1. Preparing round ${this.currentRound} for level: ${levelId}`);
+		
+		if (this.state !== 'Starting' && this.state !== 'PostRound') { 
 			console.warn(`[GameManager] Cannot prepare level in current state: ${this.state}. Aborting.`);
 			return;
 		}
@@ -459,6 +472,13 @@ export class GameManager {
 		// Check if game ended based on results
 		if (!shouldContinue) {
 			console.log("[GameManager] Round results indicate game should end. (Winner/Max Rounds)");
+			// Skip showing round results for final round
+			if (data.q.length === 1 && this.roundManager.getActivePlayerIds().length === 1) {
+				console.log("[GameManager] Final round with one winner - skipping results screen and showing winner directly");
+				// Winner will be shown via handleGameEndConditionMet
+				return;
+			}
+			
 			setTimeout(() => {
 				 if (this.state === 'GameOver') return;
 				 console.log("[GameManager] Broadcasting final round results UI.");
@@ -501,26 +521,174 @@ export class GameManager {
 		}, transitionDelay + resultsDisplayDuration); 
 	}
 
+	/**
+	 * Calculate rewards for a player based on their placement and total players
+	 */
+	private calculatePlayerRewards(placement: number, totalPlayers: number): PlayerReward {
+	    // Base coins calculation (higher placement = more coins)
+	    const BASE_COINS = 50;
+	    const PLACEMENT_MULTIPLIER = 10;
+	    const PLAYER_COUNT_BONUS = 5;
+	    
+	    // Calculate coins based on placement (inverse - 1st place gets most)
+	    // Formula: BASE + ((totalPlayers - placement + 1) * MULTIPLIER) + (totalPlayers * BONUS)
+	    const placementCoins = (totalPlayers - placement + 1) * PLACEMENT_MULTIPLIER;
+	    const playerCountBonus = totalPlayers * PLAYER_COUNT_BONUS;
+	    const coins = BASE_COINS + placementCoins + playerCountBonus;
+	    
+	    // Crown calculation (only high placements in bigger games)
+	    let crowns = 0;
+	    
+	    // No crowns for games with fewer than 5 players
+	    if (totalPlayers >= 5) {
+	        if (placement === 1) {
+	            // First place always gets at least 1 crown in 5+ player games
+	            crowns = 1;
+	            
+	            // Bonus crown for 12+ player games
+	            if (totalPlayers >= 12) {
+	                crowns += 1;
+	            }
+	        }
+	        else if (placement === 2) {
+	            // Second place gets 1 crown in 8+ player games
+	            if (totalPlayers >= 8) {
+	                crowns = 1;
+	            }
+	        }
+	        else if (placement === 3) {
+	            // Third place gets 1 crown in 12+ player games
+	            if (totalPlayers >= 12) {
+	                crowns = 1;
+	            }
+	        }
+	    }
+	    
+	    return {
+	        placement,
+	        coins,
+	        crowns
+	    };
+	}
+	
+	/**
+	 * Get player placement data for all players
+	 */
+	private getPlayerPlacements(): Map<string, number> {
+	    const placements = new Map<string, number>();
+	    
+	    if (!this.roundManager) return placements;
+	    
+	    // Get player lists
+	    const activePlayers = this.roundManager.getActivePlayerIds();
+	    const eliminatedPlayers = this.roundManager.getEliminatedPlayerIds();
+	    
+	    // Set active players as winners (start with placement 1)
+	    // In most cases this will be just one player
+	    activePlayers.forEach((playerId, index) => {
+	        placements.set(playerId, index + 1);
+	    });
+	    
+	    // Set eliminated players with lower placements
+	    // Last eliminated is placement activePlayers.length + 1
+	    // We're assuming eliminatedPlayers is ordered by elimination time
+	    const startPlacement = activePlayers.length + 1;
+	    eliminatedPlayers.forEach((playerId, index) => {
+	        placements.set(playerId, startPlacement + index);
+	    });
+	    
+	    return placements;
+	}
+
 	private handleGameEndConditionMet(reason: string): void {
 		console.log(`[GameManager] GameEndConditionMet event received: ${reason}`);
 		if (this.state === 'GameOver') return; // Avoid double-ending
+		
+		// Calculate placements for all players
+		const playerPlacements = this.getPlayerPlacements();
+		const totalPlayers = this.players.size;
 		
 		if (reason === 'LastPlayerStanding' && this.roundManager) {
 			const winnerId = this.roundManager.getLastPlayerId();
 			if (winnerId) {
 				// const winnerPlayer = this.players.get(winnerId); // Get player if needed
 				console.log(`[GameManager] Winner detected: ${winnerId}`);
-				this.events.emit('GameWon', winnerId); 
+				
+				// Show winner screen after a short delay
+				setTimeout(() => {
+					// Hide any existing UI elements
+					this.players.forEach(player => {
+						this.uiBridge?.hideHud(player);
+						this.uiBridge?.closeRoundResults(player);
+					});
+					
+					// Show the winner screen
+					console.log(`[GameManager] Showing winner screen for ${winnerId}`);
+					this.uiBridge?.broadcastWinner(winnerId);
+					
+					// Wait longer before showing player summaries
+					setTimeout(() => {
+						// Close winner screen
+						this.uiBridge?.broadcastCloseWinner();
+						
+						// Show individual player summaries
+						this.players.forEach(player => {
+							const placement = playerPlacements.get(player.id) || totalPlayers;
+							const rewards = this.calculatePlayerRewards(placement, totalPlayers);
+							
+							console.log(`[GameManager] Showing summary for player ${player.id}: placement=${placement}, coins=${rewards.coins}, crowns=${rewards.crowns}`);
+							
+							this.uiBridge?.showPlayerSummary(player, {
+								placement: rewards.placement,
+								coinsEarned: rewards.coins,
+								crownsEarned: rewards.crowns,
+								totalPlayers: totalPlayers,
+								roundsPlayed: this.currentRound
+							});
+						});
+						
+						// After summaries are shown, wait for player to click continue
+						// The actual end game is triggered by handling UI_ACTION with SUMMARY_CONTINUE action
+						this.events.emit('GameWon', winnerId);
+					}, 8000); // 8 seconds to show the winner screen
+				}, 3000); // 3 second delay before showing winner screen
+				
+				// Return early to prevent immediate game end
+				return;
 			}
 		}
+		
+		// Non-winner end conditions (max rounds, not enough players, etc.)
 		
 		// Make sure HUD is hidden for all players
 		this.players.forEach(player => {
 			this.uiBridge?.hideHud(player);
 		});
 		
-		// Always end the game when this event occurs
-		this.endGame(reason);
+		// Show player summaries first
+		setTimeout(() => {
+			// Show individual player summaries
+			this.players.forEach(player => {
+				const placement = playerPlacements.get(player.id) || totalPlayers;
+				const rewards = this.calculatePlayerRewards(placement, totalPlayers);
+				
+				this.uiBridge?.showPlayerSummary(player, {
+					placement: rewards.placement,
+					coinsEarned: rewards.coins,
+					crownsEarned: rewards.crowns,
+					totalPlayers: totalPlayers,
+					roundsPlayed: this.currentRound
+				});
+			});
+		}, 2000);
+		
+		// Always end the game when this event occurs (for non-winner cases)
+		// The actual end game is triggered by handling UI_ACTION with SUMMARY_CONTINUE action
+	}
+
+	/** Add a handler for SUMMARY_CONTINUE in UIBridge handleUIAction */
+	public handleSummaryContinue(): void {
+		this.endGame('PlayerContinued');
 	}
 
 	private handleBeforeRoundTransition(data: { nextLevelId: string | null, qualifiedPlayers: string[] }): void {
@@ -577,6 +745,9 @@ export class GameManager {
              this.roundManager = null;
         }
         
+        // Reset round counter
+        this.currentRound = 0;
+        
         // Unsubscribe GameManager from Level End event before cleaning LevelManager
         const activeLevelController = this.levelManager.getActiveLevelController();
         if (activeLevelController) {
@@ -608,6 +779,8 @@ export class GameManager {
 			// Ensure UI elements are closed/hidden
 			this.uiBridge?.hideHud(player);
 			this.uiBridge?.closeRoundResults(player);
+			this.uiBridge?.closeWinner(player);
+			this.uiBridge?.closePlayerSummary(player);
 
 			player.camera.setMode(PlayerCameraMode.SPECTATOR); 
 			this.uiBridge?.showMainMenu(player); 

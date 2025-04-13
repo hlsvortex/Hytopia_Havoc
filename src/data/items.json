@@ -1,0 +1,122 @@
+{
+  "head_default": {
+    "id": "head_default",
+    "name": "Default Head",
+    "description": "Standard issue head item",
+    "slot": "head",
+    "rarity": "common",
+    "cost": 0,
+    "modelUri": "models/cosmetics/head/basic_helmet.gltf",
+    "thumbnailUri": "textures/ui/cosmetics/head_default.png",
+    "unlockLevel": 1,
+    "isDefault": true
+  },
+  "head_crown": {
+    "id": "head_crown",
+    "name": "Royal Crown",
+    "description": "A majestic crown fit for a champion",
+    "slot": "head",
+    "rarity": "legendary",
+    "cost": 10000,
+	"modelUri": "models/cosmetics/head/viking_helmet.gltf",
+	"thumbnailUri": "textures/ui/cosmetics/head_crown.png",
+    "unlockLevel": 25,
+    "isDefault": false
+  },
+  "head_halo": {
+    "id": "head_halo",
+    "name": "Heavenly Halo",
+    "description": "Divine headwear for those blessed with skill",
+    "slot": "head",
+    "rarity": "epic",
+    "cost": 5000,
+	"modelUri": "models/cosmetics/head/basic_helmet.gltf",
+	"thumbnailUri": "textures/ui/cosmetics/head_halo.png",
+    "unlockLevel": 15,
+    "isDefault": false
+  },
+  "body_default": {
+    "id": "body_default",
+    "name": "Default Body",
+    "description": "Standard issue body outfit",
+    "slot": "body",
+    "rarity": "common",
+    "cost": 0,
+    "modelUri": "models/cosmetics/body/default.fbx",
+    "thumbnailUri": "textures/ui/cosmetics/body_default.png",
+    "unlockLevel": 1,
+    "isDefault": true
+  },
+  "body_superhero": {
+    "id": "body_superhero",
+    "name": "Superhero Suit",
+    "description": "For those who save the day... or try to",
+    "slot": "body",
+    "rarity": "rare",
+    "cost": 3000,
+    "modelUri": "models/cosmetics/body/superhero.fbx",
+    "thumbnailUri": "textures/ui/cosmetics/body_superhero.png",
+    "unlockLevel": 10,
+    "isDefault": false
+  },
+  "legs_default": {
+    "id": "legs_default",
+    "name": "Default Legs",
+    "description": "Standard issue leg wear",
+    "slot": "legs",
+    "rarity": "common",
+    "cost": 0,
+    "modelUri": "models/cosmetics/legs/default.fbx",
+    "thumbnailUri": "textures/ui/cosmetics/legs_default.png",
+    "unlockLevel": 1,
+    "isDefault": true
+  },
+  "legs_flames": {
+    "id": "legs_flames",
+    "name": "Flaming Trousers",
+    "description": "Hot pants for speedy players",
+    "slot": "legs",
+    "rarity": "rare",
+    "cost": 2000,
+    "modelUri": "models/cosmetics/legs/flames.fbx",
+    "thumbnailUri": "textures/ui/cosmetics/legs_flames.png",
+    "unlockLevel": 8,
+    "isDefault": false
+  },
+  "head_ninja": {
+    "id": "head_ninja",
+    "name": "Ninja Mask",
+    "description": "Stealthy headwear for the sneakiest players",
+    "slot": "head",
+    "rarity": "rare",
+    "cost": 2500,
+    "modelUri": "models/cosmetics/head/ninja.fbx",
+    "thumbnailUri": "textures/ui/cosmetics/head_ninja.png",
+    "unlockLevel": 12,
+    "isDefault": false
+  },
+  "body_astronaut": {
+    "id": "body_astronaut",
+    "name": "Astronaut Suit",
+    "description": "Space-ready outfit for cosmic adventures",
+    "slot": "body",
+    "rarity": "epic",
+    "cost": 4500,
+    "modelUri": "models/cosmetics/body/astronaut.fbx",
+    "thumbnailUri": "textures/ui/cosmetics/body_astronaut.png",
+    "unlockLevel": 18,
+    "isDefault": false
+  },
+  "legs_robot": {
+    "id": "legs_robot",
+    "name": "Robot Legs",
+    "description": "Mechanical legs with extra bounce",
+    "slot": "legs",
+    "rarity": "epic",
+    "cost": 3500,
+    "modelUri": "models/cosmetics/legs/robot.fbx",
+    "thumbnailUri": "textures/ui/cosmetics/legs_robot.png",
+    "unlockLevel": 14,
+    "isDefault": false
+  }
+} 

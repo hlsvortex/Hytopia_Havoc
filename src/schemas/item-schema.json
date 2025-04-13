@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Fall Guys Item Schema",
+  "description": "Schema for defining items in the Fall Guys-like game",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "required": ["id", "name", "slot", "rarity", "cost", "modelUri", "thumbnailUri", "unlockLevel"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Unique identifier for the item, should match its key in the JSON",
+        "pattern": "^[a-z0-9_]+$"
+      },
+      "name": {
+        "type": "string",
+        "description": "Display name of the item"
+      },
+      "description": {
+        "type": "string",
+        "description": "Text description of the item"
+      },
+      "slot": {
+        "type": "string",
+        "description": "Which equipment slot this item goes in",
+        "enum": ["head", "body", "legs"]
+      },
+      "rarity": {
+        "type": "string",
+        "description": "Rarity level of the item, affects its visual style and value",
+        "enum": ["common", "uncommon", "rare", "epic", "legendary"]
+      },
+      "cost": {
+        "type": "integer",
+        "description": "Cost to purchase this item in the game's currency",
+        "minimum": 0
+      },
+      "modelUri": {
+        "type": "string",
+        "description": "Path to the 3D model file for this item"
+      },
+      "thumbnailUri": {
+        "type": "string", 
+        "description": "Path to the thumbnail image for this item in the UI"
+      },
+      "unlockLevel": {
+        "type": "integer",
+        "description": "Player level required to purchase this item",
+        "minimum": 1
+      },
+      "isDefault": {
+        "type": "boolean",
+        "description": "Whether this is a default item that all players start with",
+        "default": false
+      }
+    }
+  },
+  "examples": [
+    {
+      "head_example": {
+        "id": "head_example",
+        "name": "Example Head Item",
+        "description": "An example head item to show the format",
+        "slot": "head",
+        "rarity": "rare",
+        "cost": 1500,
+        "modelUri": "models/cosmetics/head/example.fbx",
+        "thumbnailUri": "textures/ui/cosmetics/head_example.png",
+        "unlockLevel": 5,
+        "isDefault": false
+      }
+    }
+  ]
+} 

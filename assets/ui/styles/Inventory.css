@@ -1,0 +1,126 @@
+/* Inventory.css - Dedicated CSS for the inventory panel */
+
+/* Base inventory screen styling */
+.inventory-screen {
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+	display: flex;
+	flex-direction: column;
+	/* Fall Guys style green checkered background */
+	background-color: #00b4b4;
+	background-image:
+		linear-gradient(45deg, #00b4b4 25%, transparent 25%, transparent 75%, #00b4b4 75%, #00b4b4),
+		linear-gradient(45deg, #00b4b4 25%, #00d2d2 25%, #00d2d2 75%, #00b4b4 75%, #00b4b4);
+	background-size: 60px 60px;
+	background-position: 0 0, 30px 30px;
+	color: white;
+	font-family: Arial, sans-serif;
+	overflow: hidden;
+}
+
+/* Add circular gradient overlay similar to Fall Guys UI */
+.inventory-screen::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: radial-gradient(circle at center, transparent 0%, rgba(0, 180, 180, 0.3) 70%, rgba(0, 150, 150, 0.7) 100%);
+	z-index: 0;
+	pointer-events: none;
+}
+
+/* Item icon base styling */
+.item-icon {
+	width: 100%;
+	height: 100%;
+	border-radius: 4px;
+	position: relative;
+	background-size: contain;
+	background-position: center;
+	background-repeat: no-repeat;
+	background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Add rarity border indicator using pseudo-element */
+.item-icon::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	box-sizing: border-box;
+	border: 2px solid transparent;
+	border-radius: 4px;
+	pointer-events: none;
+}
+
+/* Rarity borders */
+.item-icon.rarity-common::after {
+	border-color: #bebebe;
+}
+
+.item-icon.rarity-uncommon::after {
+	border-color: #3fad55;
+}
+
+.item-icon.rarity-rare::after {
+	border-color: #4488fc;
+}
+
+.item-icon.rarity-epic::after {
+	border-color: #b54cff;
+}
+
+.item-icon.rarity-legendary::after {
+	border-color: #ff9132;
+}
+
+/* Default/fallback icons by slot */
+/* Item-specific icons - HEAD items */
+.item-icon-default-head {
+	background-image: url('../ui/icons/default.png');
+}
+
+.item-icon-royal-crown {
+	background-image: url('../ui/icons/default.png');
+}
+
+.item-icon-ninja-mask {
+	background-image: url('../ui/icons/default.png');
+}
+
+.item-icon-pirate-hat {
+	background-image: url('../ui/icons/default.png');
+}
+
+.item-icon-heavenly-halo {
+	background-image: url('../ui/icons/default.png');
+}
+
+.item-icon-legs-robot {
+	background-image: url('../ui/icons/default.png');
+}
+
+/* Default icon that will be used for all items during testing */
+.item-icon-default {
+	background-image: url('../ui/icons/default.png');
+}
+
+/* Slot-specific icon backgrounds */
+.item-icon-slot-head {
+	background-color: rgba(255, 100, 100, 0.2);
+}
+
+.item-icon-slot-body {
+	background-color: rgba(100, 255, 100, 0.2);
+}
+
+.item-icon-slot-legs {
+	background-color: rgba(100, 100, 255, 0.2);
+}

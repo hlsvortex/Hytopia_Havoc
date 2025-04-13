@@ -24,11 +24,11 @@ export default class MainMenuPanel extends BasePanel {
                         <div class="currency-container">
                             <div class="currency kudos">
                                 <div class="currency-icon"><i class="fa-solid fa-coins"></i></div>
-                                <span class="currency-amount">1000</span>
+                                <span class="currency-amount">0</span>
                             </div>
                             <div class="currency crowns">
                                 <div class="currency-icon"><i class="fa-solid fa-crown"></i></div>
-                                <span class="currency-amount">5</span>
+                                <span class="currency-amount">0</span>
                             </div>
                         </div>
                         <div class="settings-btn"><i class="fa-solid fa-gear"></i></div>
@@ -45,12 +45,14 @@ export default class MainMenuPanel extends BasePanel {
                 
                 <!-- Season progress at bottom left -->
                 <div class="season-progress-container">
-                    <div class="season-label">SEASON PROGRESS</div>
+                    <div class="season-label">PLAYER PROGRESS</div>
                     <div class="season-progress">
-                        <div class="level-badge">10</div>
-                        <div class="xp-bar-container">
-                            <div class="xp-bar"></div>
-                            <span class="xp-text">1544500</span>
+                        <div class="level-badge">1</div>
+                        <div class="xp-progress">
+                            <span class="xp-text">0 / 100 XP</span>
+                            <div class="xp-bar-container">
+                                <div class="xp-bar"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -95,6 +97,8 @@ export default class MainMenuPanel extends BasePanel {
 
         // Listen for hytopia data events
         hytopia.onData(data => {
+
+            console.log('!!Received data', data.type);
             if (data.type === 'SHOW_MAIN_MENU') {
                 this.openPanel();
                 
@@ -142,34 +146,89 @@ export default class MainMenuPanel extends BasePanel {
         });
     }
     
+    // Calculate XP required for next level
+    calculateXpForNextLevel(level) {
+        const baseXP = 100;
+        const growthFactor = 1.5;
+        return Math.floor(baseXP * Math.pow(level, growthFactor));
+    }
+    
+    // Calculate total XP needed to reach a level
+    calculateTotalXpForLevel(level) {
+        if (level <= 1) return 0;
+        
+        let totalXP = 0;
+        for (let i = 1; i < level; i++) {
+            totalXP += this.calculateXpForNextLevel(i);
+        }
+        return totalXP;
+    }
+    
+    // Calculate current level and progress based on total XP
+    calculateLevelFromXp(totalXp) {
+        let level = 1;
+        let xpForNextLevel = this.calculateXpForNextLevel(level);
+        let accumulatedXp = 0;
+        
+        while (accumulatedXp + xpForNextLevel <= totalXp) {
+            accumulatedXp += xpForNextLevel;
+            level++;
+            xpForNextLevel = this.calculateXpForNextLevel(level);
+        }
+        
+        const currentLevelXp = totalXp - accumulatedXp;
+        const progress = currentLevelXp / xpForNextLevel;
+        
+        return {
+            level,
+            currentLevelXp,
+            xpForNextLevel,
+            progress
+        };
+    }
+    
     updatePlayerData(playerData) {
         if (!playerData) return;
         
-        // Update level information
-        if (playerData.level) {
-            const levelBadge = this.container.querySelector('.level-badge');
-            if (levelBadge) levelBadge.textContent = playerData.level;
-            
-            // Update XP bar
-            if (playerData.xp && playerData.xpRequired) {
-                const xpBar = this.container.querySelector('.xp-bar');
-                const xpText = this.container.querySelector('.xp-text');
-                const xpPercent = (playerData.xp / playerData.xpRequired) * 100;
-                
-                if (xpBar) xpBar.style.width = `${xpPercent}%`;
-                if (xpText) xpText.textContent = playerData.xp;
-            }
-        }
+        console.log('Updating player data', playerData);
         
-        // Update currency values
-        if (playerData.kudos !== undefined) {
+        // Update currency values (coins and crowns)
+        if (playerData.coins !== undefined) {
             const kudosAmount = this.container.querySelector('.kudos .currency-amount');
-            if (kudosAmount) kudosAmount.textContent = playerData.kudos;
+            if (kudosAmount) kudosAmount.textContent = playerData.coins;
         }
         
         if (playerData.crowns !== undefined) {
             const crownsAmount = this.container.querySelector('.crowns .currency-amount');
             if (crownsAmount) crownsAmount.textContent = playerData.crowns;
+        }
+        
+        // Update level information and XP bar
+        if (playerData.xp !== undefined) {
+            // Calculate level and progress based on total XP
+            const xpInfo = this.calculateLevelFromXp(playerData.xp);
+            
+            // Update level badge
+            const levelBadge = this.container.querySelector('.level-badge');
+            if (levelBadge) levelBadge.textContent = xpInfo.level;
+            
+            // Update XP bar and text
+            const xpBar = this.container.querySelector('.xp-bar');
+            const xpText = this.container.querySelector('.xp-text');
+            
+            if (xpBar) {
+                // Set the width based on progress percentage
+                xpBar.style.width = `${xpInfo.progress * 100}%`;
+            }
+            
+            if (xpText) {
+                // Format XP numbers with commas for better readability
+                const currentXP = xpInfo.currentLevelXp.toLocaleString();
+                const nextLevelXP = xpInfo.xpForNextLevel.toLocaleString();
+                
+                // Show current level XP and XP needed for next level
+                xpText.innerHTML = `<span class="current-xp">${currentXP}</span> / <span class="next-level-xp">${nextLevelXP}</span> XP`;
+            }
         }
     }
 } 

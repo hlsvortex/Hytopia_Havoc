@@ -3,10 +3,11 @@ import { LevelController } from './LevelController';
 import { type LevelConfiguration } from '../config/LevelConfiguration';
 import { AreaComponent } from '../AreaComponent'; 
 import { UIBridge } from './UIBridge';
-import { GameManager, PlayerData } from './GameManager';
+import { GameManager } from './GameManager';
 import  ObstacleEntity  from '../obsticals/ObstacleEntity';
 import { EventEmitter } from '../utils/EventEmitter';
 import PlayerController from '../PlayerController';
+import type { PlayerData } from '../types/PlayerData';
 /**
  * Base controller for survival-type levels where players must avoid being eliminated
  * by staying on a platform for a set duration.

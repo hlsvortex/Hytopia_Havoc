@@ -231,4 +231,21 @@ export class UIBridge {
     public closeRoundResults(player: Player): void {
         this.sendDataToPlayer(player, { type: 'CLOSE_ROUND_RESULTS' });
     }
+
+    /**
+     * Send player data updates to the UI
+     */
+    public updatePlayerStats(player: Player, playerData: any): void {
+        console.log(`[UIBridge] Updating player stats for ${player.id}`);
+        this.sendDataToPlayer(player, {
+            type: 'PLAYER_DATA_UPDATE',
+            playerData: {
+                level: playerData.playerLevel,
+                xp: playerData.playerXP,
+                coins: playerData.coins,
+                crowns: playerData.crowns,
+                wins: playerData.wins
+            }
+        });
+    }
 } 

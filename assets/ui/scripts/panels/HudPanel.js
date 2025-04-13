@@ -43,7 +43,7 @@ export default class HudPanel extends BasePanel {
         this.panelContainer = document.getElementById('panels-container'); 
         if (this.panelContainer) {
             this.panelContainer.appendChild(topBar);
-             this.elements.topBar = topBar; // Store reference
+            this.elements.topBar = topBar; // Store reference
         } else {
             console.error("HUDPanel: Could not find panels-container element!");
         }
@@ -56,7 +56,7 @@ export default class HudPanel extends BasePanel {
             if (data.type === 'UPDATE_HUD') {
                 this.updateHud(data.hudData);
             }
-             if (data.type === 'SHOW_HUD') {
+            if (data.type === 'SHOW_HUD') {
                 this.show();
             }
             if (data.type === 'HIDE_HUD') {
@@ -80,14 +80,14 @@ export default class HudPanel extends BasePanel {
         }
         if (hudData.currentCount !== undefined && hudData.totalCount !== undefined) {
             this.elements.statusCount.textContent = `${hudData.currentCount} / ${hudData.totalCount}`;
-             // Optional: Add class based on label for styling
+            // Optional: Add class based on label for styling
             const statusContainer = this.elements.statusLabel.parentElement;
             if(hudData.statusLabel.toLowerCase() === 'eliminated') {
                 statusContainer.classList.add('status-eliminated');
                 statusContainer.classList.remove('status-qualified');
             } else {
-                 statusContainer.classList.add('status-qualified');
-                 statusContainer.classList.remove('status-eliminated');
+                statusContainer.classList.add('status-qualified');
+                statusContainer.classList.remove('status-eliminated');
             }
         }
 
@@ -105,7 +105,7 @@ export default class HudPanel extends BasePanel {
             }
         } else {
             this.elements.timer.classList.add('hidden');
-             this.elements.timer.classList.remove('low-time');
+            this.elements.timer.classList.remove('low-time');
         }
     }
     
@@ -115,8 +115,8 @@ export default class HudPanel extends BasePanel {
     }
     
     hide() {
-         if(this.elements.topBar) this.elements.topBar.style.display = 'none';
-         this.isOpen = false;
+        if(this.elements.topBar) this.elements.topBar.style.display = 'none';
+        this.isOpen = false;
     }
     
     // Override open/close panel as HUD visibility is controlled differently

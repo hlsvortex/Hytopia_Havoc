@@ -1,4 +1,4 @@
-import { World, Player, PlayerEvent, PlayerCameraMode, EntityEvent, PlayerUIEvent, Entity, PlayerEntity, ColliderShape, CollisionGroup, type Vector3Like, type PlayerEventPayloads } from 'hytopia';
+import { World, Player, PlayerEvent, PlayerCameraMode,  Entity, PlayerEntity, ColliderShape, CollisionGroup } from 'hytopia';
 import { EventEmitter } from '../utils/EventEmitter';
 import { RoundManager } from './RoundManager';
 import { gameConfig } from '../config/gameConfig';
@@ -7,100 +7,11 @@ import { UIBridge } from './UIBridge';
 import PlayerController from '../PlayerController';
 import type { LevelController } from './LevelController';
 import { Team } from '../enums/Team';
+import type { PlayerDataJSON } from '../types/PlayerDataJSON';
+import { DEFAULT_PLAYER_DATA } from '../types/PlayerDataJSON';
+import { PlayerData, type PlayerReward } from '../types/PlayerData';
+
 type GameState = 'Lobby' | 'Starting' | 'RoundInProgress' | 'PostRound' | 'GameOver';
-
-/**
- * Reward calculator for player placement
- */
-interface PlayerReward {
-    placement: number;
-    coins: number;
-    crowns: number;
-}
-
-export class PlayerData {
-	player: Player;
-	playerController: PlayerController | null;
-	playerEntity: PlayerEntity | null;
-
-	playerLevel: number;
-	playerXP: number;
-	coins: number;
-	crowns: number;
-	team: Team;
-	
-	constructor(player: Player) {
-		this.player = player;
-		this.playerController = null;
-		this.playerEntity = null;
-		this.coins = 0;
-		this.crowns = 0;
-		this.playerLevel = 1;
-		this.playerXP = 0;
-		this.team = Team.None;
-	}
-
-	public isSpawned(): boolean {
-		return this.playerEntity?.isSpawned ?? false;
-	}
-
-	public playerID(): string {
-		return this.player.id;
-	}	
-
-	public getPlayerController(): PlayerController | null {
-		return this.playerController;
-	}
-
-	public getPlayerEntity(): PlayerEntity | null {
-		return this.playerEntity;
-	}
-	
-	public getCoins(): number {
-		return this.coins;
-	}
-
-	public getCrowns(): number {
-		return this.crowns;
-	}
-
-	public addCoins(amount: number): void {
-		this.coins += amount;
-	}
-	
-	public addCrowns(amount: number): void {
-		this.crowns += amount;
-	}
-
-	public setPlayerEntity(playerEntity: PlayerEntity): void {
-		this.playerEntity = playerEntity;
-		this.playerController = playerEntity.controller as PlayerController;
-	}
-
-
-	public setSpectatorMode(): void {
-		
-		if (this.playerEntity && this.playerEntity.isSpawned) {
-			this.playerEntity.despawn();
-			console.log(`[GameManager] Despawned entity for ${this.player.id}`);
-		}
-
-		this.player.camera.setMode(PlayerCameraMode.SPECTATOR);
-		this.playerController = null;
-		this.playerEntity = null;
-	}
-
-	public leaveGame(): void {
-
-		if (this.playerEntity && this.playerEntity.isSpawned) {
-			this.playerEntity.despawn();
-			console.log(`[GameManager] Despawned entity for ${this.player.id}`);
-		}
-		
-		this.playerController = null;
-		this.playerEntity = null;
-	}
-}
 
 
 export class GameManager {
@@ -187,34 +98,64 @@ export class GameManager {
 		this.world.off(PlayerEvent.LEFT_WORLD, this.handlePlayerLeave.bind(this));
 	}
 
-	private handlePlayerJoin(payload: { player: Player }): void {
+	private async handlePlayerJoin(payload: { player: Player }): Promise<void> {
 		const player = payload.player;
 		if (this.players.has(player.id)) return;
 		if (this.joinedPlayerData.has(player.id)) return;
 
 		const playerData = new PlayerData(player);
 		this.joinedPlayerData.set(player.id, playerData);
-
 			this.players.set(player.id, player);
 
+		// Load persisted player data
+		const persistedData = await this.loadPlayerData(player);
+		playerData.fromJSON(persistedData);
+		
+		// Display welcome message with player stats
+		console.log(`[GameManager] Player ${player.id} joined with Level ${playerData.playerLevel}, Coins: ${playerData.coins}, Wins: ${playerData.wins}`);
+
+		// Show main menu and update player data display
+		this.uiBridge?.showMainMenu(player);
+
+		// Send player stats to UI for MainMenuPanel to display
+		if (this.uiBridge) {
+			setTimeout(() => {
+				this.uiBridge?.updatePlayerStats(player, playerData);
+			}, 1000);
+		}
+
+		/*
 		if (this.isGameInProgress()) {
 			this.enterSpectatorMode(player);
 		} else {
+			// Show main menu and update player data display
 			this.uiBridge?.showMainMenu(player);
+			
+			// Send player stats to UI for MainMenuPanel to display
+			if (this.uiBridge) {
+
+				setTimeout(() => {
+					this.uiBridge?.updatePlayerStats(player, playerData);
+				
+				}, 100);
+			}
 		}
+		*/
 	}
 
-	private handlePlayerLeave(payload: { player: Player }): void {
+	private async handlePlayerLeave(payload: { player: Player }): Promise<void> {
 		const player = payload.player;
 		console.log(`[GameManager] Player left world: ${player.id}`);
-		this.players.delete(player.id);
 		
 		const playerData = this.joinedPlayerData.get(player.id);
 		if (playerData) {
+			// Save player data before they leave
+			await this.savePlayerData(player, playerData);
 			playerData.leaveGame();
 		}
 
 		this.joinedPlayerData.delete(player.id);
+		this.players.delete(player.id);
 
 		if (this.state === 'RoundInProgress' || this.state === 'PostRound') {
 			if (this.players.size < gameConfig.absoluteMinPlayers) {
@@ -599,6 +540,41 @@ export class GameManager {
 		
 		const shouldContinue = this.roundManager.processRoundResults(data);
 		
+		// Award XP to players based on qualification status
+		const roundNumber = this.currentRound;
+		
+		// Award more XP to qualified players
+		data.q.forEach(playerId => {
+			const playerData = this.joinedPlayerData.get(playerId);
+			if (playerData) {
+				const xpAmount = 30 + (roundNumber * 10);
+				playerData.addXP(xpAmount);
+				console.log(`[GameManager] Qualified player ${playerId} earned ${xpAmount} XP for round ${roundNumber}`);
+				
+				// Update UI if player is still connected
+				const player = this.players.get(playerId);
+				if (player && this.uiBridge) {
+					this.uiBridge.updatePlayerStats(player, playerData);
+				}
+			}
+		});
+		
+		// Award less XP to eliminated players
+		data.e.forEach(playerId => {
+			const playerData = this.joinedPlayerData.get(playerId);
+			if (playerData) {
+				const xpAmount = 10 + (roundNumber * 5);
+				playerData.addXP(xpAmount);
+				console.log(`[GameManager] Eliminated player ${playerId} earned ${xpAmount} XP for round ${roundNumber}`);
+				
+				// Update UI if player is still connected
+				const player = this.players.get(playerId);
+				if (player && this.uiBridge) {
+					this.uiBridge.updatePlayerStats(player, playerData);
+				}
+			}
+		});
+		
 		// Prepare player lists for UI using correct event data
 		const qualifiedNames = data.q.map(id => this.getPlayerName(id));
 		const eliminatedNames = data.e.map(id => this.getPlayerName(id)); 
@@ -875,11 +851,17 @@ export class GameManager {
 		this.state = 'Starting'; 
 	}
 
-	public endGame(reason: string): void {
+	public async endGame(reason: string): Promise<void> {
 		if (this.state === 'GameOver') return;
 		console.log(`[GameManager] Ending game. Reason: ${reason}`);
 		const previousState = this.state;
 		this.state = 'GameOver';
+
+		// Apply rewards to players based on their placement
+		if (reason === 'LastPlayerStanding' || reason === 'MaxRoundsReached' || reason === 'PlayerContinued') {
+			const winnerPlayerId = reason === 'LastPlayerStanding' ? this.roundManager?.getLastPlayerId() || null : null;
+			await this.applyPlayerRewards(winnerPlayerId);
+		}
 
 		// Reset UIBridge state
 		this.uiBridge?.resetState();
@@ -965,8 +947,14 @@ export class GameManager {
 				// Reset camera to spectator mode
 				player.camera.setMode(PlayerCameraMode.SPECTATOR);
 				
-				// Show main menu
+				// Show main menu with updated stats
 				this.uiBridge?.showMainMenu(player);
+				
+				// Update player stats in main menu
+				const playerData = this.joinedPlayerData.get(player.id);
+				if (playerData && this.uiBridge) {
+					this.uiBridge.updatePlayerStats(player, playerData);
+				}
 			} catch (error) {
 				console.error(`[GameManager] Error resetting UI for player ${player.id}:`, error);
 			}
@@ -1058,5 +1046,112 @@ export class GameManager {
                 this.world.chatManager.sendPlayerMessage(playerData.player, `You have been assigned to the ${team} team!`);
             }
         }
+	}
+
+	private async loadPlayerData(player: Player): Promise<PlayerDataJSON> {
+		try {
+			console.log(`[GameManager] Loading persisted data for player ${player.id}`);
+			const persistedData = await player.getPersistedData() as unknown as PlayerDataJSON | null;
+			
+			if (!persistedData) {
+				console.log(`[GameManager] No persisted data found for player ${player.id}, using defaults`);
+				return { ...DEFAULT_PLAYER_DATA };
+			}
+			
+			console.log(`[GameManager] Loaded persisted data for player ${player.id}`);
+			return persistedData;
+		} catch (error) {
+			console.error(`[GameManager] Error loading persisted data for player ${player.id}:`, error);
+			return { ...DEFAULT_PLAYER_DATA };
+		}
+	}
+
+	private async savePlayerData(player: Player, playerData: PlayerData): Promise<void> {
+		try {
+			console.log(`[GameManager] Saving persisted data for player ${player.id}`);
+			const data = playerData.toJSON();
+			await player.setPersistedData(data as unknown as Record<string, unknown>);
+			console.log(`[GameManager] Saved persisted data for player ${player.id}`);
+		} catch (error) {
+			console.error(`[GameManager] Error saving persisted data for player ${player.id}:`, error);
+		}
+	}
+
+	/**
+	 * Updates player rewards based on their performance and saves the data
+	 */
+	private async applyPlayerRewards(winnerPlayerId: string | null): Promise<void> {
+		// Get list of all player IDs that participated (both active and eliminated)
+		const allPlayerIds = [...this.players.keys()];
+		
+		console.log(`[GameManager] Applying rewards to ${allPlayerIds.length} players. Winner: ${winnerPlayerId || 'None'}`);
+		
+		// Create mapping of players to their placement
+		const playerPlacements: Map<string, number> = new Map();
+		
+		// Winner gets 1st place
+		if (winnerPlayerId) {
+			playerPlacements.set(winnerPlayerId, 1);
+		}
+		
+		// Other active players that didn't win get next placements
+		// (This won't execute if there's only one active player, which is the winner)
+		const activePlayerIds = this.roundManager?.getActivePlayerIds() || [];
+		let placementCounter = 2; // Start at 2 since winner is 1
+		activePlayerIds.forEach(playerId => {
+			if (playerId !== winnerPlayerId) {
+				playerPlacements.set(playerId, placementCounter++);
+			}
+		});
+		
+		// Eliminated players get remaining placements
+		const eliminatedPlayerIds = this.roundManager?.getEliminatedPlayerIds() || [];
+		eliminatedPlayerIds.forEach(playerId => {
+			playerPlacements.set(playerId, placementCounter++);
+		});
+		
+		// Calculate and apply rewards to each player
+		for (const playerId of allPlayerIds) {
+			const player = this.players.get(playerId);
+			const playerData = this.joinedPlayerData.get(playerId);
+			
+			if (!player || !playerData) continue;
+			
+			const placement = playerPlacements.get(playerId) || allPlayerIds.length;
+			const totalPlayers = allPlayerIds.length;
+			
+			// Calculate XP based on placement and round number
+			const baseXP = 50;
+			const placementBonus = Math.max(0, totalPlayers - placement + 1) * 10;
+			const roundBonus = this.currentRound * 20;
+			const xpEarned = baseXP + placementBonus + roundBonus;
+			
+			// Award XP
+			playerData.addXP(xpEarned);
+			console.log(`[GameManager] Player ${playerId} earned ${xpEarned} XP (Level ${playerData.playerLevel})`);
+			
+			// Calculate rewards based on placement
+			// Winner gets a crown and coins
+			if (placement === 1) {
+				playerData.addCrowns(1);
+				playerData.addCoins(100);
+				playerData.addWin();
+				console.log(`[GameManager] Player ${playerId} WON and received 1 crown, 100 coins`);
+			} else {
+				// Other players get coins based on their placement
+				// Better placement = more coins
+				const coins = Math.max(10, 50 - ((placement - 1) * 5));
+				playerData.addCoins(coins);
+				console.log(`[GameManager] Player ${playerId} placed ${placement}/${totalPlayers} and received ${coins} coins`);
+			}
+			
+			// Update the UI with new player stats
+			if (this.uiBridge) {
+				this.uiBridge.updatePlayerStats(player, playerData);
+			}
+			
+			// Save updated player data
+			await this.savePlayerData(player, playerData);
+		}
 	}
 } 

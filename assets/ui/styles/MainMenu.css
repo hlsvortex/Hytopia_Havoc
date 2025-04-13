@@ -41,6 +41,7 @@
     width: 42px;
     height: 42px;
     border-radius: 50%;
+	margin: 0 3px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -49,7 +50,7 @@
     font-size: 18px;
     cursor: pointer;
     transition: all 0.2s ease;
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    border: 3px solid rgba(255, 255, 255, 0.1);
 }
 
 .nav-icon.active {
@@ -172,10 +173,10 @@
     bottom: 20px;
     left: 20px;
     width: 320px;
-    background-color: rgba(0, 0, 0, 0.7);
-    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.8);
+	border: 3px solid rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
     padding: 10px 15px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .season-label {
@@ -184,53 +185,101 @@
     color: #ff5eae;
     font-weight: bold;
     letter-spacing: 1px;
-    margin-bottom: 5px;
+    margin-bottom: 10px;
 }
 
 .season-progress {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 15px;
+	margin-top: 10px;
 }
 
 .level-badge {
-    background: #ff5eae;
+    background: linear-gradient(135deg, #ff5eae 0%, #ff3a8c 100%);
     color: white;
-    width: 36px;
-    height: 36px;
+    min-width: 35px;
+    height: 35px;
     border-radius: 50%;
     display: flex;
     justify-content: center;
-    align-items: center;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: bold;
-    box-shadow: 0 0 5px rgba(255, 94, 174, 0.7);
+    box-shadow: 0 0 10px rgba(255, 94, 174, 0.7);
+    transform: translateZ(0);
+    transition: transform 0.3s ease;
+    z-index: 2;
+}
+
+.level-badge:hover {
+    transform: scale(1.1) translateZ(0);
+    box-shadow: 0 0 15px rgba(255, 94, 174, 0.9);
+}
+
+.xp-progress {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    order: 2;
 }
 
 .xp-bar-container {
-    flex: 1;
-    height: 20px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
+    width: 100%;
+    height: 14px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
     overflow: hidden;
     position: relative;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 .xp-bar {
     height: 100%;
-    width: 75%;
-    background: linear-gradient(90deg, #ff5eae, #ff9eae);
-    border-radius: 10px;
+    width: 0%;
+    background: linear-gradient(90deg, #ff5eae, #ff88c1);
+    background-size: 30px 30px;
+    background-image: linear-gradient(
+        135deg,
+        rgba(233, 229, 15, 0.85) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(233, 229, 15, 0.85) 50%,
+        rgba(233, 229, 15, 0.85) 75%,
+        transparent 75%,
+        transparent
+    );
+    border-radius: 6px;
+    transition: width 0.8s cubic-bezier(0.22, 0.61, 0.36, 1);
+    animation: progress-bar-stripes 1s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 30px 0;
+    }
 }
 
 .xp-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 700;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    text-align: left;
+    padding-left: 5px;
+    color: #ffee77;
+    letter-spacing: 0.5px;
+}
+
+.xp-text .current-xp {
+    color: #ffffff;
+}
+
+.xp-text .next-level-xp {
+    color: #ffee77;
 }
 
 /* Show Selector */
@@ -288,19 +337,20 @@
 }
 
 .play-button {
-    width: 200px;
-    height: 70px;
+    width: 220px;
+    height: 80px;
     background: linear-gradient(135deg, #ffbc36 0%, #ff7336 100%);
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 5px 17px rgba(0, 0, 0, 0.4);
+	outline: 4px solid rgba(255, 255, 255, 0.9);
     transition: all 0.2s ease;
-    padding: 5px;
+    padding: 8px;
     position: relative;
     overflow: hidden;
 }
@@ -322,7 +372,7 @@
 }
 
 .play-text {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 800;
     color: white;
     text-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);

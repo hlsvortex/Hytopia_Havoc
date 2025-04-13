@@ -7,6 +7,7 @@ import { JumpClubLevelController } from '../levels/JumpClubLevelController';
 import { gameConfig } from '../config/gameConfig';
 import { UIBridge } from './UIBridge';
 import { GameManager } from './GameManager';
+import { TopDropLevelController } from '../levels/TopDropLevelController';
 /**
  * Central manager for all game levels
  */
@@ -68,6 +69,8 @@ export class LevelManager {
 				newController = new GateCrashLevelController(this.world, config, this.uiBridge, this.gameManager);
 			} else if (config.controller === JumpClubLevelController || config.id === 'jumpclub') {
 				newController = new JumpClubLevelController(this.world, config, this.uiBridge, this.gameManager);
+			} else if (config.controller === TopDropLevelController || config.id === 'topdrop') {
+				newController = new TopDropLevelController(this.world, config, this.uiBridge, this.gameManager);
 			} else {
 				console.error(`[LevelManager] Unknown controller type configured for level ${config.id}`);
 				return null;

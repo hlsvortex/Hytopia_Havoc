@@ -2,6 +2,7 @@ import { type LevelConfiguration } from './LevelConfiguration';
 import { GateCrashLevelController } from '../levels/GateCrashLevelController';
 import { SeesawLevelController } from '../levels/SeesawLevelController';
 import { JumpClubLevelController } from '../levels/JumpClubLevelController';
+import { TopDropLevelController } from '../levels/TopDropLevelController';
 // Import other level controllers later...
 
 export const gameConfig = {
@@ -78,7 +79,7 @@ export const gameConfig = {
 			displayName: 'Spinning Beam Blitz',
 			description: 'Dodge the spinning beams and make it to the finish line!',
 			controller: JumpClubLevelController,
-			levelType: 'Elimination',
+			levelType: 'Survival',
 			minPlayers: 1,
 			maxPlayers: 10,
 			minRound: 1,
@@ -88,8 +89,28 @@ export const gameConfig = {
 			difficulty: 'medium',
 			qualifyCondition: 'Survive',
 			onPlayerDeath: 'Eliminated',
+			timeLimitSeconds: 0,
 			//debugMode: true
 		},
-       
+		{
+			id: 'topdrop',
+			mapName: 'assets/top_drop.json',
+			displayName: 'Top Drop',
+			description: 'Dodge the spinning beams and make it to the finish line!',
+			controller: TopDropLevelController,
+			levelType: 'Survival',
+			minPlayers: 1,
+			maxPlayers: 10,
+			minRound: 1,
+			maxRound: 4,
+			isFinalRound: true,
+			qualificationSlotsRatio: 0.66,
+			difficulty: 'medium',
+			qualifyCondition: 'Survive',
+			onPlayerDeath: 'Eliminated',
+			showTimer: false,
+			timeLimitSeconds: 0,
+			//debugMode: true
+		},
 	] as LevelConfiguration[],
 }; 

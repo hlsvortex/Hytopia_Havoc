@@ -11,6 +11,11 @@ import type { PlayerData } from '../types/PlayerData';
 /**
  * Base controller for survival-type levels where players must avoid being eliminated
  * by staying on a platform for a set duration.
+ * 
+ * Configuration options:
+ * - timeLimitSeconds: Duration of the round in seconds
+ * - onPlayerDeath: What happens when a player falls ('RespawnAtCheckPoint' or 'Eliminated')
+ * - showTimer: Whether to show the timer in the HUD (default: true)
  */
 export abstract class SurvivalLevelController extends LevelController {
     protected playArea: AreaComponent | null = null;
@@ -26,6 +31,8 @@ export abstract class SurvivalLevelController extends LevelController {
     protected onPlayerDeathBehavior: 'RespawnAtCheckPoint' | 'Eliminated' = 'Eliminated'; // Default behavior
     protected pendingTimeouts: Set<NodeJS.Timeout> = new Set();
     protected playerDespawnTimeouts: Map<string, NodeJS.Timeout> = new Map();
+    protected showTimer: boolean = true; // Default: show timer in UI
+    protected goalMessage: string = 'Survive!'; // Default goal message
     
     constructor(world: World, config: LevelConfiguration, uiBridge: UIBridge | null = null, gameManager: GameManager) {
         super(world, config, uiBridge, gameManager);
@@ -44,6 +51,17 @@ export abstract class SurvivalLevelController extends LevelController {
             console.log(`[${this.constructor.name}] Player death behavior set to: ${this.onPlayerDeathBehavior}`);
         }
         
+        // Check if showTimer is specified in config
+        if (typeof (config as any).showTimer === 'boolean') {
+            this.showTimer = (config as any).showTimer;
+            console.log(`[${this.constructor.name}] Timer visibility set to: ${this.showTimer ? 'shown' : 'hidden'}`);
+        }
+
+        // Check if goal message is specified
+        if (typeof (config as any).goalMessage === 'string') {
+            this.goalMessage = (config as any).goalMessage;
+            console.log(`[${this.constructor.name}] Custom goal message set: "${this.goalMessage}"`);
+        }
     }
     
     /**
@@ -126,6 +144,19 @@ export abstract class SurvivalLevelController extends LevelController {
     }
     
     /**
+     * Set the goal message displayed in the HUD
+     */
+    protected setGoalMessage(message: string): void {
+        this.goalMessage = message;
+        console.log(`[${this.constructor.name}] Goal message set to: "${this.goalMessage}"`);
+        
+        // Update HUD immediately if we've already started
+        if (this.uiBridge && !this.roundEnded) {
+            this.broadcastHudUpdate();
+        }
+    }
+    
+    /**
      * Broadcast HUD update to all players with current status
      */
     protected broadcastHudUpdate(): void {
@@ -139,12 +170,19 @@ export abstract class SurvivalLevelController extends LevelController {
         // If we have 4 players and 2 can qualify, we need to eliminate 2 players
         const playersToEliminate = totalPlayers - this.qualificationTarget;
         
+        // Format the goal message with time if applicable
+        let formattedGoal = this.goalMessage;
+        if (this.showTimer && formattedGoal.includes('{time}')) {
+            formattedGoal = formattedGoal.replace('{time}', `${Math.ceil(this.timeRemaining / 1000)}`);
+        }
+        
         const hudData = {
-            goal: `Survive for ${Math.ceil(this.timeRemaining / 1000)} seconds!`,
+            goal: formattedGoal,
             statusLabel: "ELIMINATED",
             currentCount: eliminatedCount,
             totalCount: playersToEliminate,
-            timer: Math.ceil(this.timeRemaining / 1000)
+            // Only include timer if showTimer is true
+            timer: this.showTimer ? Math.ceil(this.timeRemaining / 1000) : undefined
         };
         
         console.log(`[SurvivalLevelController] HUD Update: ${eliminatedCount}/${playersToEliminate} players eliminated, ${remainingCount} remaining`);
@@ -174,6 +212,11 @@ export abstract class SurvivalLevelController extends LevelController {
     protected startRoundTimer(): void {
         console.log(`[SurvivalLevelController] Starting round timer with duration ${this.roundDuration}ms`);
         
+		if (this.roundDuration === 0) {
+			console.log(`[SurvivalLevelController] No time limit provided, round timer not started`);
+			return;
+		}
+
         // Make sure we don't have multiple timers
         if (this.timerInterval) {
             console.log(`[SurvivalLevelController] Clearing existing timer interval`);

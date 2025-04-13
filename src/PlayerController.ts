@@ -1,6 +1,39 @@
-import { PlayerEntity, EntityEvent, type PlayerInput, type PlayerCameraOrientation, type Vector3Like, type EventPayloads } from 'hytopia';
+import { PlayerEntity, EntityEvent, type PlayerInput, type PlayerCameraOrientation, type Vector3Like, type EventPayloads, Entity, Vector3, Player, PlayerEvent } from 'hytopia';
 import MyEntityController from './MyEntityController';
 import { EventEmitter } from "./utils/EventEmitter";
+import { GameManager } from './core/GameManager';
+
+declare module 'hytopia' {
+	interface BaseEntityController {
+		gameManager: GameManager;
+		setGameManager(gameManager: GameManager): void;
+		Respawn( ): void;
+	}
+}
+declare module 'hytopia' {
+	export enum PlayerEvent {
+		PLAYER_DEATH = "PLAYER.DEATH",
+		PLAYER_ELIMINATED = "PLAYER.ELIMINATED",
+		PLAYER_RESPAWN = "PLAYER.RESPAWN",
+	}
+
+	/** Event payloads for Entity emitted events. @public */
+	export interface PlayerEventPayloads {
+		/** Emitted when an entity collides with a block type. */
+		[PlayerEvent.PLAYER_DEATH]: {
+			playerController: PlayerController;
+			reason: 'falling' | 'obstacle' | 'lava' | 'other';
+		};
+		
+		[PlayerEvent.PLAYER_ELIMINATED]: {
+			playerController: PlayerController;
+		};
+
+		[PlayerEvent.PLAYER_RESPAWN]: {
+			playerController: PlayerController;
+		};
+	}
+}
 
 /**
  * Enhanced player controller that extends the base MyEntityController with additional
@@ -11,26 +44,43 @@ export default class PlayerController extends MyEntityController {
 	private fallThresholdY: number = -5; // Y position threshold for considering a fall
 	private lastCheckpointPosition: Vector3Like | null = null;
 	private fallDetectionEnabled: boolean = true;
-	private respawnCooldown: number = 0;
 	private isRespawning: boolean = false;
+	private isDead: boolean = false;
+	protected pauseMovement: boolean = false;
 
 	// Player entity associated with this controller
 	public playerEntity?: PlayerEntity;
-	
-	// Event manager for controller-specific events
-	public eventManager: EventEmitter<any> = new EventEmitter<any>();
 
 	/**
-	 * Called when the controller is attached to an entity.
+	 * Called when the	 controller is attached to an entity.
 	 * @param entity - The entity to attach the controller to.
 	 */
 	public override attach(entity: PlayerEntity): void {
 		super.attach(entity);
+		this.playerEntity = entity;
+		this.pauseMovement = true;
+		
+		//thison(PlayerEvent.PLAYER_DEATH, this.handlePlayerDeath.bind(this));
 
 		// Add fall detection as a TICK event handler
 		entity.on(EntityEvent.TICK, this.checkForFall.bind(this));
-
 		console.log('PlayerController attached with fall detection');
+	}
+
+	public getPlayerEntity(): PlayerEntity {
+		if (!this.playerEntity) {
+			throw new Error('Player entity not attached to PlayerController');
+		}
+		return this.playerEntity;
+	}
+
+	public setGameManager(gameManager: GameManager): void {
+		this.gameManager = gameManager;
+	}
+	
+	public setPauseMovement(pause: boolean): void {
+		console.log(`[PlayerController] Setting pause movement to ${pause}`);
+		this.pauseMovement = pause;
 	}
 
 	/**
@@ -39,18 +89,6 @@ export default class PlayerController extends MyEntityController {
 	private checkForFall(payload: EventPayloads[EntityEvent.TICK]): void {
 		const entity = payload.entity as PlayerEntity;
 		if (!entity || !entity.isSpawned) return;
-
-		// Update respawn cooldown first
-		if (this.respawnCooldown > 0) {
-			this.respawnCooldown -= payload.tickDeltaMs;
-
-			// Clear respawn state when cooldown expires
-			if (this.respawnCooldown <= 0) {
-				this.respawnCooldown = 0;
-				this.isRespawning = false;
-				console.log('Respawn cooldown expired, fall detection re-enabled');
-			}
-		}
 
 		// Skip fall detection if disabled or on cooldown
 		if (!this.fallDetectionEnabled || this.isRespawning) return;
@@ -63,16 +101,48 @@ export default class PlayerController extends MyEntityController {
 		}
 	}
 
+	public RespawnAtCheckpoint( ): void {
+		//console.log(`[PlayerController] Respawning player ${this.playerEntity?.player?.id}`);
+
+		if (!this.playerEntity || !this.playerEntity.world ) return;
+		
+		this.isDead = false;
+		//this.isRespawning = false;
+		//this.respawnCooldown = 2000; // 2 second cooldown
+	
+		const respawnPosition = this.lastCheckpointPosition || { x: 0, y: 10, z: 0 }; 
+
+		this.playerEntity.setPosition(respawnPosition);
+		this.playerEntity.setLinearVelocity({ x: 0, y: 0, z: 0 });
+		this.playerEntity.setAngularVelocity({ x: 0, y: 0, z: 0 });
+
+	}
+
 	/**
 	 * Handle player fall (respawn at provided position)
 	 * @param entity The player entity that fell
 	 * @param respawnPosition The position to respawn the player at
 	 */
 	public handleFall(entity: PlayerEntity, respawnPosition: Vector3Like): void {
-		if (!entity.isSpawned || !entity.world || this.isRespawning) return;
+		if (!entity.isSpawned || !entity.world|| this.isDead) return;
 
-		console.log(`PlayerController: Handling fall for ${entity.player?.id}, respawning at ${JSON.stringify(respawnPosition)}`);
+		this.isDead = true;
+		//this.emit(PlayerEvent.PLAYER_DEATH, { playerController: this, reason: 'falling' });
 		
+		const levelController = this.gameManager.getActiveLevel();
+		if (!levelController) return;
+		
+
+		if (levelController.getConfig().onPlayerDeath === 'RespawnAtCheckPoint') {
+			this.resetInput = true;
+			this.RespawnAtCheckpoint();
+		} else if (levelController.getConfig().onPlayerDeath === 'Eliminated') {
+			this.resetInput = true;
+			levelController.eliminatePlayer(entity);
+		}
+
+
+		/*
 		// Set respawn state and cooldown to prevent multiple respawns
 		this.isRespawning = true;
 		this.respawnCooldown = 2000; // 2 second cooldown
@@ -86,16 +156,19 @@ export default class PlayerController extends MyEntityController {
 		finalRespawnPos.y += 0.5; // Add a small vertical offset
 
 		entity.setPosition(finalRespawnPos);
+		*/
 
 		// Notify when player respawns (optional)
 		// if (entity.player && entity.world) {
 		// 	entity.world.chatManager.sendBroadcastMessage('Respawned!'); // Generic message
 		// }
 
-		console.log(`PlayerController: Respawn complete for ${entity.player?.id} at`, finalRespawnPos);
+		//entity.emit(PlayerEvent.PLAYER_DEATH, { reason: 'falling' });
+
+		//console.log(`PlayerController: Respawn complete for ${entity.player?.id} at`, finalRespawnPos);
 		
 		// Emit event if using EventManager
-		this.eventManager.emit('fallRespawn', { playerId: entity.player?.id, position: finalRespawnPos });
+		//this.eventManager.emit('fallRespawn', { playerId: entity.player?.id, position: finalRespawnPos });
 	}
 
 	/**
@@ -135,20 +208,18 @@ export default class PlayerController extends MyEntityController {
 	 * Override of the input handling to add checkpoint setting with a key
 	 */
 	public override tickWithPlayerInput(entity: PlayerEntity, input: PlayerInput, cameraOrientation: PlayerCameraOrientation, deltaTimeMs: number): void {
+		
 		// Call the parent implementation for normal movement
 		super.tickWithPlayerInput(entity, input, cameraOrientation, deltaTimeMs);
 		
-		// Check if player pressed the C key (checkpoint)
-		if (input.c) {
-			// Set current position as checkpoint
-			this.setCheckpoint(entity.position);
-
-			// Provide feedback to the player
-			if (entity.player && entity.world) {
-				entity.world.chatManager.sendBroadcastMessage('Checkpoint set at your current position.');
-			}
-
-			input.c = false; // Consume the input
+		if (this.pauseMovement)  {
+			entity.setLinearVelocity({ x: 0, y: 0, z: 0 });
+			this.resetInput = true;
+			input.w = false;
+			input.a = false;
+			input.s = false;
+			input.d = false;
+			return; 
 		}
 	}
 } 

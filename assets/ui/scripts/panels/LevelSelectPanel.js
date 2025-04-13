@@ -13,6 +13,7 @@ export default class LevelSelectPanel extends BasePanel {
         this.levels = [
             { id: 'seesaw', name: 'Seesaw Showdown', image: 'level_seesaw.jpg', description: 'Navigate the treacherous seesaws to reach the finish line!', type: 'Race' },
             { id: 'gatecrash', name: 'Gate Crash', image: 'level_gatecrash.jpg', description: 'Bash through the doors and race to the finish!', type: 'Race' },
+            { id: 'rotatingbeam', name: 'Spinning Beam Blitz', image: 'level_default.jpg', description: 'Dodge the spinning beams and race to the finish line!', type: 'Race' }
             // Add more level details here matching the structure
         ];
     }

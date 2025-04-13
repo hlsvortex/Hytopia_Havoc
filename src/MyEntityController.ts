@@ -61,6 +61,7 @@ export default class MyEntityController extends BaseEntityController {
 
 	private wantedDeltaVelocities: Vector3Like = { x: 0, y: 0, z: 0 };
 
+	protected resetInput: boolean = true;
 
 	/**
 	 * A function allowing custom logic to determine if the entity can walk.
@@ -104,6 +105,7 @@ export default class MyEntityController extends BaseEntityController {
 		this.canWalk = options.canWalk ?? this.canWalk;
 		this.canRun = options.canRun ?? this.canRun;
 		this.canJump = options.canJump ?? this.canJump;
+		this.resetInput = true;
 	}
 
 	/** Whether the entity is grounded. */
@@ -127,6 +129,8 @@ export default class MyEntityController extends BaseEntityController {
 			attachedToEntity: entity,
 		});
 
+		
+		
 		entity.lockAllRotations(); // prevent physics from applying rotation to the entity, we can still explicitly set it.
 	};
 
@@ -140,6 +144,8 @@ export default class MyEntityController extends BaseEntityController {
 		if (!entity.isSpawned) {
 			throw new Error('MyEntityController.createColliders(): Entity is not spawned!');
 		}
+
+		this.resetInput = true;
 
 		entity.setGravityScale(1.1);
 
@@ -191,7 +197,7 @@ export default class MyEntityController extends BaseEntityController {
 				belongsTo: [CollisionGroup.ENTITY_SENSOR],
 				collidesWith: [CollisionGroup.BLOCK, CollisionGroup.ENTITY],
 			},
-			friction: 0.1,
+			friction: 0.0,
 			frictionCombineRule: CoefficientCombineRule.Min,
 			tag: 'wallCollider',
 		});
@@ -209,9 +215,17 @@ export default class MyEntityController extends BaseEntityController {
 	public tickWithPlayerInput(entity: PlayerEntity, input: PlayerInput, cameraOrientation: PlayerCameraOrientation, deltaTimeMs: number) {
 		if (!entity.isSpawned || !entity.world) return;
 
+		const { w, a, s, d, sp, sh, ml } = input;
+
+		if (this.resetInput) {
+			input = { w: false, a: false, s: false, d: false, sp: false, sh: false, ml: false };
+			entity.rawRigidBody.linearVelocity = { x: 0, y: 0, z: 0 };
+			this.wantedDeltaVelocities = { x: 0, y: 0, z: 0 };
+			this.resetInput = false;
+		}
+
 		super.tickWithPlayerInput(entity, input, cameraOrientation, deltaTimeMs);
 
-		const { w, a, s, d, sp, sh, ml } = input;
 		const { yaw } = cameraOrientation;
 		const currentVelocity = entity.linearVelocity;
 		const targetVelocities = { x: 0, y: 0, z: 0 };
@@ -237,25 +251,6 @@ export default class MyEntityController extends BaseEntityController {
 			const idleAnimations = ['idle_upper', 'idle_lower'];
 			entity.stopModelAnimations(Array.from(entity.modelLoopedAnimations).filter(v => !idleAnimations.includes(v)));
 			entity.startModelLoopedAnimations(idleAnimations);
-		}
-
-		if (ml) {
-			entity.startModelOneshotAnimations(['simple_interact']);
-
-			// break a block
-			const ray = entity.world.simulation.raycast(
-				entity.position,
-				entity.player.camera.facingDirection,
-				10,
-				{ filterExcludeRigidBody: entity.rawRigidBody },
-			);
-
-			if (ray?.hitBlock) {
-				// Remove the block
-				entity.world.chunkLattice.setBlock(ray.hitBlock.globalCoordinate, 0);
-			}
-
-			input.ml = false;
 		}
 
 		// Calculate target horizontal velocities (run/walk)

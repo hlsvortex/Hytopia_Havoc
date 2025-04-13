@@ -4,17 +4,12 @@ import { CourseLevelController } from '../core/CourseLevelController';
 import { CrashWallObstacle, type CrashWallObstacleOptions } from '../obsticals/CrashWallObstacle';
 import { type LevelConfiguration } from '../config/LevelConfiguration';
 import { UIBridge } from '../core/UIBridge';
-
+import { GameManager } from '../core/GameManager';
 /**
  * Specialized level controller for gate crash obstacle course levels
  */
 export class GateCrashLevelController extends CourseLevelController {
-    private obstacles: CrashWallObstacle[] = [];
     private difficulty: 'easy' | 'medium' | 'hard' = 'medium';
-    private courseStartZ: number = 15;
-    private obstacleSpacing: number = 8;
-    private courseWidth: number = 16;
-    private wallThickness: number = 0.5;
     private wallHeight: number = 4;
     private wallWidth: number = 3;
 
@@ -24,8 +19,8 @@ export class GateCrashLevelController extends CourseLevelController {
      * @param config Level configuration
      * @param uiBridge UI bridge (optional)
      */
-    constructor(world: World, config: LevelConfiguration, uiBridge: UIBridge | null = null) {
-        super(world, config, uiBridge);
+    constructor(world: World, config: LevelConfiguration, uiBridge: UIBridge | null = null, gameManager: GameManager) {
+        super(world, config, uiBridge, gameManager);
         this.difficulty = config.difficulty || 'medium';
         console.log(`Created gate crash level with ${this.difficulty} difficulty`);
     }
@@ -35,7 +30,7 @@ export class GateCrashLevelController extends CourseLevelController {
      */
     protected setupCourseBoundaries(): void {
         // Example - Adjust these coordinates based on your actual map layout
-        this.setStartArea(
+        this.clearAndSetStartArea(
             { x: 12, y: 2, z: -7 }, 
             { x: -12, y: 2, z: 7 }, 
             1 // Spawn Height
@@ -53,17 +48,17 @@ export class GateCrashLevelController extends CourseLevelController {
         // TODO: Add Checkpoint Areas if needed
         // this.addCheckpointArea(...);
     }
-    
-    /**
-     * Activate this level - load the map and create obstacles
-     */
-    public activate(): void {
-        console.log(`[GateCrashLevelController] Activating level`);
-        this.createCourse();
-        // Setup boundaries AFTER obstacles are created so we can potentially use their positions
-        this.setupCourseBoundaries(); 
-    }
-    
+   	
+	/**
+	* Activate this level - load the map and create obstacles
+	*/
+	public override loadLevel(): void {
+		this.loadMap();
+		this.setupCourseBoundaries(); // Set up start area first
+		this.createCourse();
+	}
+
+	
     /**
      * Create the course layout with CrashWallObstacles
      */
@@ -159,6 +154,7 @@ export class GateCrashLevelController extends CourseLevelController {
         console.log(`[GateCrash] Course creation complete with ${this.obstacles.length} walls.`);
     }
 
+
     private calculateWallPositions(count: number, width: number, z: number): Vector3Like[] {
         const positions: Vector3Like[] = [];
         const totalWallWidth = count * this.wallWidth;
@@ -181,25 +177,24 @@ export class GateCrashLevelController extends CourseLevelController {
             finalOptions.size = size;
         }
         
-        const wall = new CrashWallObstacle(finalOptions);
+        const wall = new CrashWallObstacle(finalOptions, this);
         wall.spawn(this.world, position);
         this.obstacles.push(wall);
+        
+        // Register the wall as an obstacle with the level controller
+        this.registerObstacle(wall);
+        console.log(`[GateCrash] Registered crash wall obstacle: ${wall.id}`);
     }
 
-    public resetCourse(): void {
-        console.log('[GateCrash] Resetting course obstacles...');
-        for (const obstacle of this.obstacles) {
-            obstacle.resetState();
-        }
-    }
+   
 
     public startRound(players: Player[], qualificationTarget: number): void {
-        super.startRound(players, qualificationTarget);
-        this.resetCourse();
         console.log(`[GateCrash] Round started with ${players.length} players. Target: ${qualificationTarget}`);
+        super.startRound(players, qualificationTarget);
+        this.resetObstacles();
         
         // TODO: Implement actual round end condition based on finished players
-		// Temporary timer removed, round end triggered by handlePlayerFinished
+        // Temporary timer removed, round end triggered by handlePlayerFinished
         // setTimeout(() => {
         //     const qualified = players.map(p => p.id);
         //     const eliminated: string[] = [];
@@ -209,18 +204,21 @@ export class GateCrashLevelController extends CourseLevelController {
     
     public cleanup(): void {
         console.log('[GateCrash] Cleaning up Gate Crash level...');
+        // First cleanup local resources
         for (const obstacle of this.obstacles) {
-            obstacle.stopMovement();
+            obstacle.deactivate();
             if (obstacle.isSpawned) {
                 obstacle.despawn();
             }
         }
+
         this.obstacles = [];
         
-        console.log(`[GateCrash] Calling base class cleanup for course areas and map clearing`);
+        // Then call parent class cleanup
+        console.log('[GateCrash] Calling parent class cleanup');
         super.cleanup();
         
-        console.log(`[GateCrash] Cleanup complete`);
+        console.log('[GateCrash] Cleanup complete');
     }
 
     /**

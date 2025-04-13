@@ -1,23 +1,14 @@
 import { type EntityOptions, EntityEvent, type EventPayloads, RigidBodyType, Quaternion, Collider, CoefficientCombineRule } from 'hytopia';
 import ObstacleEntity from './ObstacleEntity';
+import type { LevelController } from '../core/LevelController';
 
 // --- Configuration for Seesaw Physics ---
-// How strongly the seesaw tries to return to center (higher = stronger)
-const SPRING_STRENGTH = 100; // Reduced strength for more natural movement
-// How much the seesaw resists rotation (higher = more damping)
-const DAMPING_FACTOR = 20; // Reduced damping for more natural movement
 // Maximum allowed rotation angle in radians (about 35 degrees)
 const MAX_ANGLE = 0.65;
 // ----------------------------------------
 
 export default class SeesawEntity extends ObstacleEntity {
-	constructor(options: EntityOptions = {}) {
-		// Extract potential overrides, defaulting if not provided
-		const frictionOverride = options.rigidBodyOptions?.colliders?.[0]?.friction;
-		const frictionCombineRuleOverride = options.rigidBodyOptions?.colliders?.[0]?.frictionCombineRule;
-
-		const defaultFriction = 0.7;
-		const defaultCombineRule = CoefficientCombineRule.Average;
+	constructor(options: EntityOptions = {}, levelController: LevelController) {
 
 		const defaultOptions: EntityOptions = {
 			name: 'Seesaw',
@@ -43,13 +34,13 @@ export default class SeesawEntity extends ObstacleEntity {
 				// Set a higher center of mass to make it less stable initially if needed
 				// centerOfMass: { x: 0, y: 0.1, z: 0 }
 				// Increase angular damping if it spins too freely
-				angularDamping: 0.3,
+				angularDamping: 0.2,
 				ccdEnabled: true,
 			},
 		};
 		
 		// Merge default options with any provided options
-		super({ ...defaultOptions, ...options });
+		super({ ...defaultOptions, ...options }, levelController);
 		
 		// Register our physics update method to replace the parent class's event handler
 		this.off(EntityEvent.TICK, this.onPhysicsUpdate);

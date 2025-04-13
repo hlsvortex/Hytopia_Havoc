@@ -3,7 +3,7 @@ import { CourseLevelController } from '../core/CourseLevelController';
 import { type LevelConfiguration } from '../config/LevelConfiguration';
 import SeesawEntity from '../obsticals/SeesawEntity';
 import { UIBridge } from '../core/UIBridge';
-
+import { GameManager } from '../core/GameManager';
 /**
  * Specialized level controller for seesaw obstacle course levels
  */
@@ -15,7 +15,7 @@ export class SeesawLevelController extends CourseLevelController {
 	private difficulty: 'easy' | 'medium' | 'hard' = 'medium';
 	private courseRowCount: number = 0;
 
-	/**
+	/**	
 	 * Create a new seesaw level controller
 	 * @param world Game world
 	 * @param config Level configuration
@@ -24,9 +24,10 @@ export class SeesawLevelController extends CourseLevelController {
 	constructor(
 		world: World,
 		config: LevelConfiguration,
-		uiBridge: UIBridge | null = null
+		uiBridge: UIBridge | null = null,
+		gameManager: GameManager
 	) {
-		super(world, config, uiBridge);
+		super(world, config, uiBridge, gameManager);
 		this.difficulty = config.difficulty || 'medium';
 		console.log(`Created seesaw level with ${this.difficulty} difficulty`);
 	}
@@ -35,7 +36,7 @@ export class SeesawLevelController extends CourseLevelController {
 	 * Define start/finish areas specifically for Seesaw level.
 	 */
 	protected setupCourseBoundaries(): void {
-		this.setStartArea(
+		this.clearAndSetStartArea(
 			{ x: 10, y: 2, z: -7 },
 			{ x: -10, y: 2, z: 7 },
 			1 // Spawn Height
@@ -53,18 +54,26 @@ export class SeesawLevelController extends CourseLevelController {
 	}
 
 	/**
-	 * Activate this level - load the map and create obstacles
-	 */
-	public activate(): void {
-		console.log(`[SeesawLevelController] Activating level`);
-		this.createSeesawCourse();
+	* Activate this level - load the map and create obstacles
+	*/
+	public override loadLevel(): void {
+		this.loadMap();
+		this.setupCourseBoundaries(); // Set up start area first
+		this.createCourse();
 	}
+
+	
+	public override eliminatePlayer(playerEntity: PlayerEntity): void {
+		//console.log(`[SeesawLevelController] Eliminating player ${playerEntity.player?.id}`);
+		//playerEntity.despawn();
+	}
+
 
 	/**
 	 * Create a layout of seesaws in a line with default configuration
 	 */
-	protected createSeesawCourse(config: {
-		baseDepth?: number;
+	protected createCourse(config: {
+		baseDepth?: number;			
 		baseXOffset?: number;
 		seesawDepth?: number;
 		rows?: number;
@@ -132,15 +141,8 @@ export class SeesawLevelController extends CourseLevelController {
 	 * @param position Position to place the seesaw
 	 */
 	public addSeesaw(position: Vector3Like): SeesawEntity {
-		const seesaw = new SeesawEntity();
+		const seesaw = new SeesawEntity({}, this);
 
-		if (this.difficulty === 'easy') {
-			// Make seesaws more stable for easy difficulty
-			// Implementation depends on SeesawEntity's API
-		} else if (this.difficulty === 'hard') {
-			// Make seesaws less stable for hard difficulty
-			// Implementation depends on SeesawEntity's API
-		}
 
 		seesaw.spawn(this.world, position);
 
@@ -162,9 +164,9 @@ export class SeesawLevelController extends CourseLevelController {
 	}
 
 	public startRound(players: Player[], qualificationTarget: number): void {
+		console.log(`[SeesawLevelController] Starting round with ${players.length} players. Target: ${qualificationTarget}`);
 		super.startRound(players, qualificationTarget);
 		this.resetSeesaws();
-		console.log(`[SeesawLevelController] Starting round with ${players.length} players. Target: ${qualificationTarget}`);
 	}
 
 	public cleanup(): void {
@@ -178,14 +180,13 @@ export class SeesawLevelController extends CourseLevelController {
 			});
 			this.seesaws = [];
 		}
+
+
 		console.log(`[SeesawLevelController] Calling base class cleanup for course areas and map clearing`);
 		super.cleanup();
 		console.log(`[SeesawLevelController] Cleanup complete`);
 	}
 
-	public hasPlayerFallenOff(player: PlayerEntity): boolean {
-		return player.position.y < -5;
-	}
 
 	public getSeesawCount(): number {
 		return this.seesaws.length;

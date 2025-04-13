@@ -1,6 +1,7 @@
 import { World, Entity, EntityEvent, RigidBodyType, ColliderShape, Vector3, type Vector3Like, type EntityOptions, type EventPayloads, CollisionGroup } from 'hytopia';
 import * as path from 'path';
 import ObstacleEntity from './ObstacleEntity'; // Import the parent class
+import type { LevelController } from '../core/LevelController';
 
 // Define possible states for the wall's movement cycle
 type MovementState = 'DELAYING' | 'MOVING_UP' | 'WAITING_TOP' | 'MOVING_DOWN' | 'WAITING_BOTTOM';
@@ -33,7 +34,7 @@ export class CrashWallObstacle extends ObstacleEntity {
 	private timeAccumulator: number = 0;
 	private isMovementActive: boolean = false;
 
-	constructor(options: CrashWallObstacleOptions & EntityOptions = {}) {
+	constructor(options: CrashWallObstacleOptions & EntityOptions = {}, levelController: LevelController) {
 		// Determine wall size and select appropriate model
 		const wallSize = options.size || 'medium';
 		let modelPath = '';
@@ -67,7 +68,7 @@ export class CrashWallObstacle extends ObstacleEntity {
 			},
 		};
 
-		super({ ...defaultOptions, ...options }); // Call ObstacleEntity constructor
+		super({ ...defaultOptions, ...options }, levelController); // Call ObstacleEntity constructor
 		
 		// Store the size AFTER super() call
 		this.wallSize = wallSize;
@@ -119,7 +120,7 @@ export class CrashWallObstacle extends ObstacleEntity {
 
 	// Define as a standard method with override
 	public override onPhysicsUpdate(payload: EventPayloads[EntityEvent.TICK]): void {
-		if (!this.isMovementActive || !this.isSpawned) return;
+		if (!this.isMovementActive || !this.isSpawned || this.paused) return;
 
 		const deltaTimeS = payload.tickDeltaMs / 1000.0;
 		this.timeAccumulator += payload.tickDeltaMs;
@@ -221,6 +222,26 @@ export class CrashWallObstacle extends ObstacleEntity {
 	public stopMovement(): void {
 		this.isMovementActive = false;
 		console.log(`[CrashWallObstacle ${this.id}] Movement stopped.`);
+	}
+
+	/**
+	 * Override the activate method from ObstacleEntity
+	 * Start the wall's movement cycle when activated
+	 */
+	public override activate(): void {
+		super.activate(); // Call parent activate first
+		console.log(`[CrashWallObstacle ${this.id}] Activated - starting movement cycle`);
+		this.isMovementActive = true;
+	}
+	
+	/**
+	 * Override the deactivate method from ObstacleEntity
+	 * Stop the wall's movement when deactivated
+	 */
+	public override deactivate(): void {
+		super.deactivate(); // Call parent deactivate first
+		console.log(`[CrashWallObstacle ${this.id}] Deactivated - stopping movement`);
+		this.stopMovement();
 	}
 
 	public resetState(): void {

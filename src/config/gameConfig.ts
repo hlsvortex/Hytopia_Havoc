@@ -1,6 +1,7 @@
 import { type LevelConfiguration } from './LevelConfiguration';
 import { GateCrashLevelController } from '../levels/GateCrashLevelController';
 import { SeesawLevelController } from '../levels/SeesawLevelController';
+import { JumpClubLevelController } from '../levels/JumpClubLevelController';
 // Import other level controllers later...
 
 export const gameConfig = {
@@ -27,6 +28,12 @@ export const gameConfig = {
 			name: "Gate Crash",
 			mapPath: "assets/gate_crash.json",
 			difficulty: "medium"
+		},
+		rotatingbeam: {
+			id: "rotatingbeam",
+			name: "Spinning Beam Blitz",
+			mapPath: "assets/rotating_beam.json", // Create this map file
+			difficulty: "medium"
 		}
 	},
 
@@ -44,7 +51,9 @@ export const gameConfig = {
 			maxRound: 4,
 			isFinalRound: false,
 			qualificationSlotsRatio: 0.66,
-			difficulty: 'medium'
+			difficulty: 'medium',
+			qualifyCondition: 'PassFinishLine',
+			onPlayerDeath: 'RespawnAtCheckPoint'
 		},
 		{
 			id: 'gatecrash',
@@ -58,8 +67,29 @@ export const gameConfig = {
 			maxRound: 4,
 			isFinalRound: false,
 			qualificationSlotsRatio: 0.66,
-			difficulty: 'medium'
+			difficulty: 'medium',
+			qualifyCondition: 'PassFinishLine',
+			onPlayerDeath: 'RespawnAtCheckPoint',
+			//debugMode: true
 		},
-
+		{
+			id: 'jumpclub',
+			mapName: 'assets/jump_club.json',
+			displayName: 'Spinning Beam Blitz',
+			description: 'Dodge the spinning beams and make it to the finish line!',
+			controller: JumpClubLevelController,
+			levelType: 'Elimination',
+			minPlayers: 1,
+			maxPlayers: 10,
+			minRound: 1,
+			maxRound: 4,
+			isFinalRound: true,
+			qualificationSlotsRatio: 0.66,
+			difficulty: 'medium',
+			qualifyCondition: 'Survive',
+			onPlayerDeath: 'Eliminated',
+			//debugMode: true
+		},
+       
 	] as LevelConfiguration[],
 }; 

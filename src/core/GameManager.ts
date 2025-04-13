@@ -1,13 +1,12 @@
-import { World, Player, PlayerEvent, PlayerCameraMode, EntityEvent, PlayerUIEvent, Entity, PlayerEntity, ColliderShape, CollisionGroup } from 'hytopia';
+import { World, Player, PlayerEvent, PlayerCameraMode, EntityEvent, PlayerUIEvent, Entity, PlayerEntity, ColliderShape, CollisionGroup, type Vector3Like, type PlayerEventPayloads } from 'hytopia';
 import { EventEmitter } from '../utils/EventEmitter';
 import { RoundManager } from './RoundManager';
 import { gameConfig } from '../config/gameConfig';
 import { LevelManager } from './LevelManager';
 import { UIBridge } from './UIBridge';
 import PlayerController from '../PlayerController';
-import { CourseLevelController } from './CourseLevelController';
-import { LevelController } from './LevelController'; // Import base LevelController
-
+import type { LevelController } from './LevelController';
+import { Team } from '../enums/Team';
 type GameState = 'Lobby' | 'Starting' | 'RoundInProgress' | 'PostRound' | 'GameOver';
 
 /**
@@ -19,19 +18,110 @@ interface PlayerReward {
     crowns: number;
 }
 
+export class PlayerData {
+	player: Player;
+	playerController: PlayerController | null;
+	playerEntity: PlayerEntity | null;
+
+	playerLevel: number;
+	playerXP: number;
+	coins: number;
+	crowns: number;
+	team: Team;
+	
+	constructor(player: Player) {
+		this.player = player;
+		this.playerController = null;
+		this.playerEntity = null;
+		this.coins = 0;
+		this.crowns = 0;
+		this.playerLevel = 1;
+		this.playerXP = 0;
+		this.team = Team.None;
+	}
+
+	public isSpawned(): boolean {
+		return this.playerEntity?.isSpawned ?? false;
+	}
+
+	public playerID(): string {
+		return this.player.id;
+	}	
+
+	public getPlayerController(): PlayerController | null {
+		return this.playerController;
+	}
+
+	public getPlayerEntity(): PlayerEntity | null {
+		return this.playerEntity;
+	}
+	
+	public getCoins(): number {
+		return this.coins;
+	}
+
+	public getCrowns(): number {
+		return this.crowns;
+	}
+
+	public addCoins(amount: number): void {
+		this.coins += amount;
+	}
+	
+	public addCrowns(amount: number): void {
+		this.crowns += amount;
+	}
+
+	public setPlayerEntity(playerEntity: PlayerEntity): void {
+		this.playerEntity = playerEntity;
+		this.playerController = playerEntity.controller as PlayerController;
+	}
+
+
+	public setSpectatorMode(): void {
+		
+		if (this.playerEntity && this.playerEntity.isSpawned) {
+			this.playerEntity.despawn();
+			console.log(`[GameManager] Despawned entity for ${this.player.id}`);
+		}
+
+		this.player.camera.setMode(PlayerCameraMode.SPECTATOR);
+		this.playerController = null;
+		this.playerEntity = null;
+	}
+
+	public leaveGame(): void {
+
+		if (this.playerEntity && this.playerEntity.isSpawned) {
+			this.playerEntity.despawn();
+			console.log(`[GameManager] Despawned entity for ${this.player.id}`);
+		}
+		
+		this.playerController = null;
+		this.playerEntity = null;
+	}
+}
+
+
 export class GameManager {
+	
 	private world: World;
+	private roundManager: RoundManager | null = null;
 	private state: GameState = 'Lobby';
 	private players: Map<string, Player> = new Map();
-	private playerEntities: Map<string, PlayerEntity> = new Map();
-	private roundManager: RoundManager | null = null;
-	public levelManager: LevelManager;
+	private joinedPlayerData : Map<string, PlayerData> = new Map();
+
+	//public activePlayerIds: Set<string> = new Set(); // Added
+	public eliminatedPlayerIds: Set<string> = new Set(); // Added
+
 	private uiBridge: UIBridge | null = null;
 	private currentQualificationTarget: number = 0;
 	// Store listener reference for cleanup
 	private boundHandleLevelRoundEnd: (data: { q: string[], e: string[] }) => void;
 	private boundHandleBeforeRoundTransition: (data: { nextLevelId: string | null, qualifiedPlayers: string[] }) => void;
 	private currentRound: number = 0; // Track the round number
+	
+	public levelManager: LevelManager;
 	
 	public events = new EventEmitter<{
 		GameWon: string;
@@ -40,7 +130,7 @@ export class GameManager {
 
 	constructor(world: World) {
 		this.world = world;
-		this.levelManager = new LevelManager(world, this.uiBridge);
+		this.levelManager = new LevelManager(world, this.uiBridge, this);
 		this.boundHandleLevelRoundEnd = this.handleLevelRoundEnd.bind(this);
 		this.boundHandleBeforeRoundTransition = this.handleBeforeRoundTransition.bind(this);
 		console.log('[GameManager] Initialized in Lobby state.');
@@ -53,6 +143,22 @@ export class GameManager {
 		if(this.levelManager) {
 			this.levelManager.setUIBridge(uiBridge);
 		}
+	}
+
+	public getPlayerData(playerId: string): PlayerData | null {
+		return this.joinedPlayerData.get(playerId) ?? null;
+	}
+
+	public getPlayerEntity(playerId: string): PlayerEntity | null {
+		return this.joinedPlayerData.get(playerId)?.playerEntity ?? null;
+	}
+
+	public getPlayerController(playerId: string): PlayerController | null {
+		return this.joinedPlayerData.get(playerId)?.playerController ?? null;
+	}
+
+	public getActiveLevel(): LevelController | null {
+		return this.levelManager.getActiveLevelController() ?? null;
 	}
 
 	public getGameState(): GameState {
@@ -84,9 +190,12 @@ export class GameManager {
 	private handlePlayerJoin(payload: { player: Player }): void {
 		const player = payload.player;
 		if (this.players.has(player.id)) return;
+		if (this.joinedPlayerData.has(player.id)) return;
 
-		console.log(`[GameManager] Player joined world: ${player.id}`);
-		this.players.set(player.id, player);
+		const playerData = new PlayerData(player);
+		this.joinedPlayerData.set(player.id, playerData);
+
+			this.players.set(player.id, player);
 
 		if (this.isGameInProgress()) {
 			this.enterSpectatorMode(player);
@@ -100,12 +209,12 @@ export class GameManager {
 		console.log(`[GameManager] Player left world: ${player.id}`);
 		this.players.delete(player.id);
 		
-		const playerEntity = this.playerEntities.get(player.id);
-		if (playerEntity && playerEntity.isSpawned) {
-			playerEntity.despawn();
-			console.log(`[GameManager] Despawned entity for ${player.id}`);
+		const playerData = this.joinedPlayerData.get(player.id);
+		if (playerData) {
+			playerData.leaveGame();
 		}
-		this.playerEntities.delete(player.id);
+
+		this.joinedPlayerData.delete(player.id);
 
 		if (this.state === 'RoundInProgress' || this.state === 'PostRound') {
 			if (this.players.size < gameConfig.absoluteMinPlayers) {
@@ -135,11 +244,9 @@ export class GameManager {
 		console.log(`[GameManager] Setting player ${player.id} to spectator mode.`);
 		this.uiBridge?.closeMenu(player);
 
-		const existingEntity = this.playerEntities.get(player.id);
-		if (existingEntity && existingEntity.isSpawned) {
-			existingEntity.despawn();
-			this.playerEntities.delete(player.id);
-			console.log(`[GameManager] Despawned existing entity for spectator ${player.id}.`);
+		const existingEntity = this.joinedPlayerData.get(player.id);
+		if (existingEntity && existingEntity.isSpawned()) {
+			existingEntity.setSpectatorMode();
 		}
 
 		player.camera.setMode(PlayerCameraMode.SPECTATOR);
@@ -154,25 +261,36 @@ export class GameManager {
 		const activeLevelController = this.levelManager.getActiveLevelController();
 		let spawnPoint = { x: 0, y: 10, z: 0 }; // Default fallback spawn
 		
-		if (activeLevelController && activeLevelController instanceof CourseLevelController) {
-		    const courseController = activeLevelController as CourseLevelController;
-		    const levelSpawn = courseController.getSpawnPosition();
-		    if (levelSpawn) {
-		        spawnPoint = levelSpawn;
-		    } else {
-		         console.warn(`[GameManager] Active course level controller ${courseController.getLevelName()} did not provide a spawn point. Using default.`);
-		    }
-		} else {
-		     console.warn(`[GameManager] No active course level controller found. Using default spawn point.`);
+		// Check if the active level controller has team-based spawn positions
+		if (activeLevelController) {
+			// Get the player data to check for team assignment
+			const playerData = this.joinedPlayerData.get(player.id);
+			
+			// Try to use team-specific spawn point if the controller supports it and the player has a team
+			// First check if this is a JumpClubLevelController which has the getSpawnPositionForTeam method
+			if (activeLevelController.constructor.name === 'JumpClubLevelController' && 
+				playerData && 
+				playerData.team) {
+				// Use the team-specific spawn method
+				const teamSpawn = (activeLevelController as any).getSpawnPositionForTeam(playerData.team);
+				if (teamSpawn) {
+					spawnPoint = teamSpawn;
+					console.log(`[GameManager] Using team-specific spawn for player ${player.id}, team: ${playerData.team}`);
+				}
+			} else {
+				// Fall back to standard spawn position
+				spawnPoint = activeLevelController.getStartSpawnPosition() ?? spawnPoint;
+			}
 		}
+
 		// --- End Get Spawn Point ---
-		
-		console.log(`[GameManager] Spawning player ${player.id} in game at ${JSON.stringify(spawnPoint)}`);
 		this.uiBridge?.closeMenu(player);
 		
 		const playerController = new PlayerController();
-		const fallThreshold = -15;
-		playerController.setFallThreshold(fallThreshold);
+		playerController.setGameManager(this);
+
+
+		//playerController.eventManager.on(FGPlayerEvent.PLAYER_DEATH, this.handlePlayerDeath.bind(this));
 
 		const playerEntity = new PlayerEntity({
 			player,
@@ -190,11 +308,13 @@ export class GameManager {
 		                 shape: ColliderShape.CAPSULE, // Or BOX, etc.
                          halfHeight: 0.6, // Example value
                          radius: 0.4,    // Example value
+						 friction: 0.0,
 		                 collisionGroups: {
 		                    belongsTo: [CollisionGroup.PLAYER],
 		                    collidesWith: [
-		                        CollisionGroup.ENTITY_SENSOR,  // Ensure it collides with sensors
-		                      ]
+		                        CollisionGroup.ENTITY_SENSOR,
+								CollisionGroup.PLAYER,
+							  ]
 		                }
 		            }
 		        ]
@@ -213,8 +333,14 @@ export class GameManager {
 
 		// Spawn at the determined spawn point
 		playerEntity.spawn(this.world, spawnPoint); 
-		this.playerEntities.set(player.id, playerEntity);
+		//this.playerEntities.set(player.id, playerEntity);
 
+		const playerData = this.joinedPlayerData.get(player.id);
+
+		if (playerData) {
+			playerData.setPlayerEntity(playerEntity);
+
+		}
 		// DO NOT CHANGE THIS CODE - IT IS CORRECT
 		player.camera.setMode(PlayerCameraMode.FIRST_PERSON);
 		player.camera.setForwardOffset(-6); 
@@ -223,30 +349,8 @@ export class GameManager {
 		
 		this.world.chatManager.sendPlayerMessage(player, `Use WASD to move, Space to jump.`);
 		playerController.setCheckpoint(spawnPoint); // Use the determined spawn point as the first checkpoint
-		
-		if (activeLevelController) {
-		    activeLevelController.registerPlayer(player); // Register player with the actual controller
-		}
-
-		const tickListener = () => {
-			if (!playerEntity.isSpawned) {
-				this.world.off(EntityEvent.TICK, tickListener);
-				return;
-			}
-			if (playerEntity.position.y < fallThreshold) {
-			    let respawnPoint = spawnPoint; 
-			    if (activeLevelController && activeLevelController instanceof CourseLevelController) {
-			        const courseController = activeLevelController as CourseLevelController;
-			        const checkpointSpawn = courseController.getCheckpointRespawnPosition(playerEntity.position);
-			        if (checkpointSpawn) {
-			            respawnPoint = checkpointSpawn;
-			        }
-			    }
-			    playerController.handleFall(playerEntity, respawnPoint); 
-			}
-		};
-		this.world.on(EntityEvent.TICK, tickListener);
 	}
+
 
 	public startGame(): void {
 		if (this.state !== 'Lobby') {
@@ -270,12 +374,22 @@ export class GameManager {
             // Include other relevant data for UI if needed
             minPlayers: level.minPlayers,
             maxPlayers: level.maxPlayers,
-            qualificationSlotsRatio: level.qualificationSlotsRatio
+            qualificationSlotsRatio: level.qualificationSlotsRatio,
+			debugMode: level.debugMode
 		}));
 		
-		this.players.forEach(player => {
-			this.uiBridge?.showLevelSelect(player, levelList);
-		});
+
+		const debugLevels = levelList.filter(config => Boolean(config.debugMode));
+
+		if (debugLevels.length > 0) {
+			this.players.forEach(player => {
+				this.uiBridge?.showLevelSelect(player, debugLevels);
+			});
+		} else {
+			this.players.forEach(player => {
+				this.uiBridge?.showLevelSelect(player, levelList);
+			});
+		}
 	}
 
 	/** 
@@ -292,6 +406,9 @@ export class GameManager {
 			return;
 		}
 
+		// Reset UIBridge state at the start of a new round
+		this.uiBridge?.resetState();
+
 		// Activate the chosen level
 		console.log(`[GameManager] 2. Attempting to activate level: ${levelId}`);
 		if (!this.levelManager.activateLevel(levelId)) {
@@ -304,9 +421,20 @@ export class GameManager {
         // --- Calculate Qualification Target --- 
         const config = this.levelManager.getLevelConfigById(levelId);
         const playerCount = this.players.size;
-        this.currentQualificationTarget = playerCount; 
+        this.currentQualificationTarget = playerCount;
 
         if (config) {
+            // Check if this is a team-based level
+            if (config.teamMode) {
+                console.log(`[GameManager] Team mode detected for level ${levelId}. Assigning teams...`);
+                this.assignTeamsRandomly();
+            } else {
+                // Reset teams to None for non-team levels
+                this.joinedPlayerData.forEach(playerData => {
+                    playerData.team = Team.None;
+                });
+            }
+            
             // Force a final round configuration when only 2 players remain
             const onlyTwoPlayersRemain = this.roundManager?.getActivePlayerIds().length === 2;
             const isFinalRound = config.isFinalRound || onlyTwoPlayersRemain;
@@ -327,8 +455,8 @@ export class GameManager {
 
         // Initialize RoundManager if it doesn't exist (first round)
         if (!this.roundManager) {
-            const initialPlayerIds = Array.from(this.players.keys());
-            this.roundManager = new RoundManager(this.world, initialPlayerIds, this.levelManager); 
+		const initialPlayerIds = Array.from(this.players.keys());
+            this.roundManager = new RoundManager(this.world, initialPlayerIds, this.levelManager, this); 
             // Subscribe to RoundManager events
             this.roundManager.events.on('GameEndConditionMet', this.handleGameEndConditionMet.bind(this)); 
             this.roundManager.events.on('BeforeRoundTransition', this.boundHandleBeforeRoundTransition); // Use bound handler
@@ -347,13 +475,13 @@ export class GameManager {
         console.log(`[GameManager] 6. Spawning ${activePlayerIds.length} active players for round...`);
         
         // First despawn any existing player entities to prevent duplicates
-        this.playerEntities.forEach((entity, playerId) => {
-            if (entity.isSpawned) {
+        this.joinedPlayerData.forEach((playerData, playerId) => {
+            if (playerData.playerEntity && playerData.playerEntity.isSpawned) {
                 console.log(`[GameManager] Despawning existing entity for player ${playerId}`);
-                entity.despawn();
+                playerData.playerEntity.despawn();
             }
         });
-        this.playerEntities.clear();
+
         
         // Now spawn only the active players
         activePlayerIds.forEach(playerId => {
@@ -376,7 +504,7 @@ export class GameManager {
         console.log(`[GameManager] 7. Finished spawning players for level ${levelId}. Ready for gameplay start.`);
         
         // Set state to RoundInProgress AFTER spawning is done
-        this.state = 'RoundInProgress';
+		this.state = 'RoundInProgress';
 	}
 	
 	/** 
@@ -394,14 +522,40 @@ export class GameManager {
 		console.log('[GameManager] Showing & Initializing HUD for all players.');
 		const activeLevelController = this.levelManager.getActiveLevelController();
 		const activeLevelConfig = activeLevelController ? this.levelManager.getLevelConfigById(activeLevelController.getConfigId()) : null;
-		const initialHudData = {
-		    goal: activeLevelConfig?.displayName ?? "Survive!",
-		    statusLabel: "QUALIFIED",
-		    currentCount: 0,
-		    totalCount: this.currentQualificationTarget,
-		    timer: null 
-		};
-		
+
+		// Determine if this is a survival-type level
+		const isSurvivalLevel = activeLevelController && (
+			activeLevelController.constructor.name === 'SurvivalLevelController' ||
+			activeLevelController.constructor.name === 'JumpClubLevelController'
+		);
+
+		let initialHudData;
+
+		if (isSurvivalLevel) {
+			// For Survival levels, show elimination count
+			const totalPlayers = this.players.size;
+			const playersToEliminate = totalPlayers - this.currentQualificationTarget;
+			
+			initialHudData = {
+				goal: activeLevelConfig?.displayName ?? "Survive!",
+				statusLabel: "ELIMINATED", 
+				currentCount: 0, // No players eliminated yet
+				totalCount: playersToEliminate, // Number of players that need to be eliminated
+				timer: null // Will be set by the level controller when the timer starts
+			};
+			
+			console.log(`[GameManager] Setting up Survival HUD: Elimination target ${playersToEliminate} of ${totalPlayers} players`);
+		} else {
+			// For other levels (course/race type), show qualification count
+			initialHudData = {
+				goal: activeLevelConfig?.displayName ?? "Race to the finish!",
+				statusLabel: "QUALIFIED",
+				currentCount: 0,
+				totalCount: this.currentQualificationTarget,
+				timer: null
+			};
+		}
+
 		this.players.forEach(player => {
 			this.uiBridge?.showHud(player);
 			this.uiBridge?.updateHud(player, initialHudData);
@@ -409,21 +563,20 @@ export class GameManager {
 		// --- End Show & Update HUD ---
 		
 		// Start the round logic via LevelManager
-		console.log(`[GameManager] 8. Attempting to start round gameplay via LevelManager with ${this.players.size} players.`);
 		if (this.levelManager.startRound(this.getPlayers(), this.currentQualificationTarget)) { 
 			console.log(`[GameManager] 9. Round gameplay started successfully.`);
             
             // Subscribe GameManager and RoundManager to level end event AFTER round starts
             if (activeLevelController) {
-                console.log(`[GameManager] Subscribing GameManager to RoundEnd event of ${activeLevelController.getLevelName()}`);
                 activeLevelController.events.on('RoundEnd', this.boundHandleLevelRoundEnd);
                 this.roundManager?.subscribeToActiveLevelEndEvent(); // Tell RoundManager to subscribe too
+                
+                // Tell the level controller to begin gameplay (activate obstacles, etc.)
+                activeLevelController.beginGameplay();
             } else {
-                 console.error("[GameManager] Cannot subscribe to level end: No active controller after startRound!");
                  this.endGame('MissingControllerPostStart');
             }
 		} else {
-			console.error(`[GameManager] LevelManager failed to start round gameplay. Ending game.`);
 			this.endGame('FailedToStartRoundGameplay'); 
 		}
 	}
@@ -451,24 +604,15 @@ export class GameManager {
 		const eliminatedNames = data.e.map(id => this.getPlayerName(id)); 
 
 		// Despawn remaining players (those in 'e')
-		console.log("[GameManager] Despawning eliminated player entities...");
-		this.playerEntities.forEach((entity, playerId) => {
-			if (entity.isSpawned && data.e.includes(playerId)) { // Check if player ID is in eliminated list
-				console.log(`[GameManager] Despawning eliminated player ${playerId}`);
-				try {
-					entity.player?.camera.setMode(PlayerCameraMode.SPECTATOR); 
-					entity.despawn();
-				 } catch(e) {
-					 console.error(`[GameManager] Error despawning player ${playerId} on round end:`, e);
-				 }
+		this.joinedPlayerData.forEach((playerData, playerId) => {
+			if (playerData.playerEntity) { // Check if player ID is in eliminated list
+				playerData.setSpectatorMode();
 			}
 		});
-		// Remove despawned entities from the map
-		data.e.forEach(playerId => this.playerEntities.delete(playerId));
-		// Qualified players should have already been despawned with a delay by handlePlayerFinished
-		// Clear remaining qualified players from map too, just in case delay overlaps
-		data.q.forEach(playerId => this.playerEntities.delete(playerId));
-
+		
+		// Reset UIBridge state to prepare for next round
+		this.uiBridge?.resetState();
+		
 		// Check if game ended based on results
 		if (!shouldContinue) {
 			console.log("[GameManager] Round results indicate game should end. (Winner/Max Rounds)");
@@ -649,7 +793,7 @@ export class GameManager {
 						
 						// After summaries are shown, wait for player to click continue
 						// The actual end game is triggered by handling UI_ACTION with SUMMARY_CONTINUE action
-						this.events.emit('GameWon', winnerId);
+				this.events.emit('GameWon', winnerId);
 					}, 8000); // 8 seconds to show the winner screen
 				}, 3000); // 3 second delay before showing winner screen
 				
@@ -737,54 +881,182 @@ export class GameManager {
 		const previousState = this.state;
 		this.state = 'GameOver';
 
-        // Unsubscribe from RoundManager events
-        if (this.roundManager) {
-             this.roundManager.events.off('GameEndConditionMet', this.handleGameEndConditionMet.bind(this));
-             this.roundManager.events.off('BeforeRoundTransition', this.boundHandleBeforeRoundTransition);
-             this.roundManager.cleanup(); 
-             this.roundManager = null;
-        }
-        
-        // Reset round counter
-        this.currentRound = 0;
-        
-        // Unsubscribe GameManager from Level End event before cleaning LevelManager
-        const activeLevelController = this.levelManager.getActiveLevelController();
-        if (activeLevelController) {
-            console.log(`[GameManager] endGame: Unsubscribing from RoundEnd of ${activeLevelController.getLevelName()}`);
-            activeLevelController.events.off('RoundEnd', this.boundHandleLevelRoundEnd);
-        }
-        // Also tell RoundManager to unsubscribe its listener if it exists
-        // This might be redundant if roundManager cleanup handles it, but safe.
-        // this.roundManager?.unsubscribeFromActiveLevelEndEvent(); 
-        
-        // Cleanup LevelManager (cleans active level controller)
-		if (this.levelManager) {
-			this.levelManager.cleanup();
+		// Reset UIBridge state
+		this.uiBridge?.resetState();
+
+		// Unsubscribe from RoundManager events with proper bound methods
+		if (this.roundManager) {
+			try {
+			this.roundManager.events.off('GameEndConditionMet', this.handleGameEndConditionMet.bind(this));
+				this.roundManager.events.off('BeforeRoundTransition', this.boundHandleBeforeRoundTransition);
+			this.roundManager.cleanup();
+			} catch (error) {
+				console.error('[GameManager] Error during RoundManager cleanup:', error);
+			}
+			this.roundManager = null;
 		}
 		
-        // Despawn player entities
-		console.log(`[GameManager] Despawning ${this.playerEntities.size} player entities.`);
-		this.playerEntities.forEach(entity => {
-			if (entity.isSpawned) entity.despawn();
-		});
-		this.playerEntities.clear();
+		// Reset round counter
+		this.currentRound = 0;
 		
-        // Emit event and notify players
+		// Reset qualification target
+		this.currentQualificationTarget = 0;
+		
+		// Reset eliminated player sets
+		this.eliminatedPlayerIds.clear();
+		
+		// Unsubscribe GameManager from Level End event before cleaning LevelManager
+		const activeLevelController = this.levelManager.getActiveLevelController();
+		if (activeLevelController) {
+			try {
+				activeLevelController.events.off('RoundEnd', this.boundHandleLevelRoundEnd);
+			} catch (error) {
+				console.error('[GameManager] Error unsubscribing from RoundEnd:', error);
+			}
+		}
+		
+		// Cleanup LevelManager (cleans active level controller)
+		if (this.levelManager) {
+			try {
+				this.levelManager.cleanup();
+			} catch (error) {
+				console.error('[GameManager] Error during LevelManager cleanup:', error);
+			}
+		}
+		
+		console.log("[GameManager] Despawning all player entities");
+		
+		// Properly clean up all player entities and reset player state
+		this.joinedPlayerData.forEach((playerData, playerId) => {
+			try {
+				// Reset player team
+				playerData.team = Team.None;
+				
+				// Properly clean up player entity if it exists
+				if (playerData.playerEntity) {
+					if (playerData.playerEntity.isSpawned) {
+						console.log(`[GameManager] Despawning entity for player ${playerId}`);
+						playerData.playerEntity.despawn();
+					}
+					playerData.playerEntity = null;
+				}
+				
+				// Reset player controller
+				playerData.playerController = null;
+			} catch (error) {
+				console.error(`[GameManager] Error cleaning up player ${playerId}:`, error);
+			}
+		});
+		
+		// Emit event and notify players
 		this.events.emit('GameEnded', reason);
 		this.world.chatManager.sendBroadcastMessage(`Game Over! Reason: ${reason}`);
 		console.log("[GameManager] Game Over. Resetting players and state to Lobby.");
 		
+		// Clean up UI and reset camera for all players
 		this.players.forEach(player => {
-			// Ensure UI elements are closed/hidden
-			this.uiBridge?.hideHud(player);
-			this.uiBridge?.closeRoundResults(player);
-			this.uiBridge?.closeWinner(player);
-			this.uiBridge?.closePlayerSummary(player);
+			try {
+				// Ensure UI elements are closed/hidden
+				this.uiBridge?.hideHud(player);
+				this.uiBridge?.closeRoundResults(player);
+				this.uiBridge?.closeWinner(player);
+				this.uiBridge?.closePlayerSummary(player);
 
-			player.camera.setMode(PlayerCameraMode.SPECTATOR); 
-			this.uiBridge?.showMainMenu(player); 
+				// Reset camera to spectator mode
+				player.camera.setMode(PlayerCameraMode.SPECTATOR);
+				
+				// Show main menu
+				this.uiBridge?.showMainMenu(player);
+			} catch (error) {
+				console.error(`[GameManager] Error resetting UI for player ${player.id}:`, error);
+			}
 		});
-		this.state = 'Lobby'; 
+		
+		// Finally set state back to Lobby
+		this.state = 'Lobby';
+		console.log("[GameManager] Game state reset to Lobby, ready for new game");
 	}
-}
+
+    /**
+     * Assign teams randomly to all active players.
+     * This is used for team-based levels.
+     */
+    private assignTeamsRandomly(): void {
+        // Get active player IDs
+        const activePlayerIds = this.roundManager?.getActivePlayerIds() || Array.from(this.players.keys());
+        
+        if (activePlayerIds.length === 0) {
+            console.log(`[GameManager] No active players to assign teams to.`);
+            return;
+        }
+        
+        // Shuffle the player IDs to randomize team assignment
+        const shuffledPlayerIds = [...activePlayerIds].sort(() => Math.random() - 0.5);
+        
+        // Determine how many teams to use based on player count
+        const playerCount = shuffledPlayerIds.length;
+        let teams: Team[] = [];
+        
+        if (playerCount <= 2) {
+            // For 1-2 players, just Red vs Blue
+            teams = [Team.Red, Team.Blue];
+        } else if (playerCount <= 6) {
+            // For 3-6 players, use all three teams
+            teams = [Team.Red, Team.Blue, Team.Green];
+        } else {
+            // For more players, use all three teams with emphasis on Red and Blue
+            const redCount = Math.ceil(playerCount / 3);
+            const blueCount = Math.ceil(playerCount / 3);
+            const greenCount = playerCount - redCount - blueCount;
+            
+            teams = Array(redCount).fill(Team.Red)
+                .concat(Array(blueCount).fill(Team.Blue))
+                .concat(Array(greenCount).fill(Team.Green));
+                
+            // Shuffle the teams array
+            teams = teams.sort(() => Math.random() - 0.5);
+        }
+        
+        // Assign teams to players
+        shuffledPlayerIds.forEach((playerId, index) => {
+            const teamIndex = index % teams.length;
+            const team = teams[teamIndex];
+            this.assignTeamToPlayer(playerId, team);
+        });
+        
+        // Log team assignments
+        console.log(`[GameManager] Team assignments complete.`);
+        const teamCounts = {
+            [Team.Red]: 0,
+            [Team.Blue]: 0,
+            [Team.Green]: 0,
+            [Team.None]: 0
+        };
+        
+        this.joinedPlayerData.forEach(playerData => {
+            if (activePlayerIds.includes(playerData.playerID())) {
+                teamCounts[playerData.team]++;
+            }
+        });
+        
+        console.log(`[GameManager] Team Red: ${teamCounts[Team.Red]}, Team Blue: ${teamCounts[Team.Blue]}, Team Green: ${teamCounts[Team.Green]}`);
+    }
+    
+    /**
+     * Assign a specific team to a player.
+     * @param playerId The ID of the player to assign a team to
+     * @param team The team to assign
+     */
+    private assignTeamToPlayer(playerId: string, team: Team): void {
+        const playerData = this.joinedPlayerData.get(playerId);
+        if (playerData) {
+            playerData.team = team;
+            console.log(`[GameManager] Assigned player ${playerId} to team ${team}`);
+            
+            // Optionally, notify the player of their team assignment
+            if (playerData.player) {
+                this.world.chatManager.sendPlayerMessage(playerData.player, `You have been assigned to the ${team} team!`);
+            }
+        }
+	}
+} 

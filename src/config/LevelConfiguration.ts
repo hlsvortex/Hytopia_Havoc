@@ -24,5 +24,13 @@ export interface LevelConfiguration {
 	// Optional fields based on level type
 	qualificationSlotsRatio?: number; // e.g., 0.6 = 60% of players qualify
 	timeLimitSeconds?: number; // e.g., 120 for Survival
+	teamSize?: 0 | 2 | 3; // e.g., 2 for Team
+	teamMode?: boolean; // Whether this level uses team mechanics
+	qualifyCondition?: 'Survive' | 'PassFinishLine' | 'MostPoints'; // e.g., 'Survive' for Survival
+	onPlayerDeath?: 'RespawnAtCheckPoint' | 'Eliminated'; // e.g., 'RespawnAtCheckPoint' for Survival
+	finalRound?: boolean; // e.g., true for Final
+
+	debugMode?: boolean; // e.g., true for Debug
+
 	// Add other type-specific settings as needed (e.g., teamSize)
 } 

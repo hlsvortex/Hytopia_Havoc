@@ -4,11 +4,20 @@ import { GameManager } from './GameManager'; // Forward declaration
 export class UIBridge {
     private world: World;
     private gameManager: GameManager;
+    private roundReadyProcessed: boolean = false; // Track if round ready has been processed for current round
 
     constructor(world: World, gameManager: GameManager) {
         this.world = world;
         this.gameManager = gameManager;
         console.log('[UIBridge] Initialized');
+    }
+
+    /**
+     * Reset internal state (should be called when game ends or new round starts)
+     */
+    public resetState(): void {
+        console.log('[UIBridge] Resetting internal state');
+        this.roundReadyProcessed = false;
     }
 
     /**
@@ -47,8 +56,6 @@ export class UIBridge {
                 this.handleUIAction(player, data.action, data.payload);
                 break;
             case 'TOGGLE_POINTER_LOCK': // Handle pointer lock requests from UI
-                 // Pointer lock is typically controlled client-side or via player.ui methods if available
-                 console.log(`[UIBridge] Pointer lock request received: ${data.enabled}. Hytopia usually manages this automatically or client-side.`);
                  break;
             // Add other data types handlers as needed (e.g., 'SETTINGS_UPDATE')
             default:
@@ -67,20 +74,27 @@ export class UIBridge {
                 break;
             case 'LEVEL_SELECTED': // New Action
                 if (payload && payload.levelId) {
+                    // Reset our state when a new level is selected
+                    this.resetState();
                     this.gameManager.prepareRound(payload.levelId);
                 } else {
                     console.error('[UIBridge] LEVEL_SELECTED action missing levelId payload');
                 }
                 break;
-             case 'ROUND_READY': // Modified Action
-                 // Sent from LevelSelectPanel countdown end
-                 console.log('[UIBridge] ROUND_READY received. Telling GameManager to begin gameplay.');
-                 this.gameManager.beginRoundGameplay(); 
-                 break;
+            case 'ROUND_READY': // Modified Action
+                // Only process the first ROUND_READY event
+                if (!this.roundReadyProcessed) {
+                    console.log(`[UIBridge] Processing first ROUND_READY from ${player.id}`);
+                    this.roundReadyProcessed = true;
+                    this.gameManager.beginRoundGameplay();
+                } else {
+                    console.log(`[UIBridge] Ignoring duplicate ROUND_READY from ${player.id}`);
+                }
+                break;
             case 'SUMMARY_CONTINUE': // New Action
-                 console.log('[UIBridge] SUMMARY_CONTINUE received. Player has finished viewing their summary.');
-                 this.gameManager.handleSummaryContinue();
-                 break;
+                console.log('[UIBridge] SUMMARY_CONTINUE received. Player has finished viewing their summary.');
+                this.gameManager.handleSummaryContinue();
+                break;
             case 'START_GAME': // Keep for potential future use
                 console.log('[UIBridge] START_GAME action received but not yet implemented via UI.');
                 break;

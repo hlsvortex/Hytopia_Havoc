@@ -4,19 +4,18 @@ import { type LevelConfiguration } from '../config/LevelConfiguration';
 import { AreaComponent } from '../AreaComponent'; // Import AreaComponent
 import { TriggerEntity } from '../TriggerEntity'; // Import TriggerEntity
 import { UIBridge } from './UIBridge'; // Corrected path
+import { GameManager } from './GameManager';
+import PlayerController from '../PlayerController';
+
 
 export abstract class CourseLevelController extends LevelController {
-    protected startArea: AreaComponent | null = null;
     protected finishArea: AreaComponent | null = null;
     protected finishTrigger: TriggerEntity | null = null; // Added
     protected checkpoints: AreaComponent[] = [];
-    protected qualifiedPlayerIds: Set<string> = new Set(); // Added
-    protected qualificationTarget: number = 0; // Added
-    protected startingPlayerIds: Set<string> = new Set(); // Added to track who started
     protected boundariesInitialized: boolean = false; // Track if boundaries are set up
     
-    constructor(world: World, config: LevelConfiguration, uiBridge: UIBridge | null = null) {
-        super(world, config, uiBridge);
+    constructor(world: World, config: LevelConfiguration, uiBridge: UIBridge | null = null, gameManager: GameManager) {
+        super(world, config, uiBridge, gameManager);
         // Don't call setupCourseBoundaries here - will be called in startRound when needed
         console.log(`[${this.constructor.name}] Constructor called for ${config.id}`);
     }
@@ -27,16 +26,17 @@ export abstract class CourseLevelController extends LevelController {
      */
     protected abstract setupCourseBoundaries(): void;
 
-    /**
-     * Defines the starting area for the course.
-     * @param corner1 One corner of the starting area.
-     * @param corner2 The opposite corner of the starting area.
-     * @param spawnHeight Optional fixed Y-level for spawning within the area.
-     */
-    protected setStartArea(corner1: Vector3Like, corner2: Vector3Like, spawnHeight?: number): void {
-        this.startArea = new AreaComponent(corner1, corner2, spawnHeight);
-        console.log(`[${this.constructor.name}] Start area set.`);
-    }
+	public override eliminatePlayer(playerEntity: PlayerEntity): void {
+		//console.log(`[CourseLevelController] Eliminating player ${playerEntity.player?.id}`);
+	}
+
+	protected respawnPlayerAtCheckpoint(playerEntity: PlayerEntity): void {
+		//console.log(`[CourseLevelController] Respawning player  at checkpoint`);
+		
+		const playerController = playerEntity.controller as PlayerController;
+		playerController.RespawnAtCheckpoint();
+
+	}
 
     /**
      * Defines the finish area and creates the finish trigger entity.
@@ -134,6 +134,27 @@ export abstract class CourseLevelController extends LevelController {
         }
     }
     
+	/**
+	 * Begin actual gameplay after any intro/countdown
+	 * Activates all obstacles and emits an event
+	 */
+	public override beginGameplay(): void {
+		console.log(`[${this.constructor.name}] Beginning gameplay - activating obstacles`);
+
+		// Activate all registered obstacles
+		this.obstacles.forEach(obstacle => {
+			obstacle.activate();
+		});
+
+		this.setPausePlayersIds(Array.from(this.startingPlayerIds), false);
+
+		// Emit gameplay start event
+		this.events.emit('RoundGameplayStart', null);
+
+		// Start the round timer (now only started here, not in startRound)
+		console.log(`[${this.constructor.name}] Starting round timer`);
+	}
+
     /**
      * Broadcasts the current HUD state to all players.
      */
@@ -185,14 +206,7 @@ export abstract class CourseLevelController extends LevelController {
         console.log(`[${this.constructor.name}] Checkpoint area ${this.checkpoints.length} added.`);
     }
 
-    /**
-     * Gets a random spawn position within the defined start area.
-     * @returns A spawn position or null if start area is not defined.
-     */
-    public getSpawnPosition(): Vector3Like | null {
-        return this.startArea ? this.startArea.getRandomPosition() : null;
-    }
-
+   
     /**
      * Checks if a given position is within the finish area.
      * @param position The position to check.
@@ -217,7 +231,7 @@ export abstract class CourseLevelController extends LevelController {
             }
         }
         // If no checkpoint passed, return start area spawn
-        return this.getSpawnPosition(); 
+        return this.getStartSpawnPosition(); 
     }
     
     /**
@@ -226,22 +240,18 @@ export abstract class CourseLevelController extends LevelController {
      * @param qualificationTarget Number of players needed to qualify.
      */
     public startRound(players: Player[], qualificationTarget: number): void {
-        console.log(`[${this.constructor.name}] startRound received. Target Value: ${qualificationTarget}, Player Count: ${players.length}`);
         this.qualificationTarget = qualificationTarget;
         this.qualifiedPlayerIds.clear(); 
         // Store starting player IDs
         this.startingPlayerIds = new Set(players.map(p => p.id)); 
-        console.log(`[${this.constructor.name}] Stored Qualification Target set to: ${this.qualificationTarget}. Stored ${this.startingPlayerIds.size} starting players.`);
+
+		this.setPausePlayers(players, true);
         
         // Check if we need to initialize boundaries
         if (!this.boundariesInitialized) {
-            console.log(`[${this.constructor.name}] First initialization of boundaries`);
             this.setupCourseBoundaries();
             this.boundariesInitialized = true;
-            console.log(`[${this.constructor.name}] Course boundaries initialized`);
         } else {
-            console.log(`[${this.constructor.name}] Boundaries already initialized, no need to recreate`);
-            
             // Check if finish trigger needs respawning (might have been despawned but not nullified)
             if (this.finishTrigger && !this.finishTrigger.isSpawned && this.finishArea) {
                 console.log(`[${this.constructor.name}] Respawning finish trigger`);
@@ -251,34 +261,35 @@ export abstract class CourseLevelController extends LevelController {
     }
     
     // Override cleanup 
-    public cleanup(): void {
-        console.log(`[${this.constructor.name} ${this.config.id}] Cleaning up course controller...`);
+    public override cleanup(): void {
+        console.log(`[${this.constructor.name}] Cleaning up course level resources`);
+        
+        // First cleanup local resources
         if (this.finishTrigger) {
-             console.log(`[${this.constructor.name} ${this.config.id}] Found finishTrigger (ID: ${this.finishTrigger.id}). Is spawned: ${this.finishTrigger.isSpawned}`);
-             if (this.finishTrigger.isSpawned) {
-                 try {
-                     this.finishTrigger.despawn();
-                     console.log(`[${this.constructor.name} ${this.config.id}] Despawned finishTrigger.`);
-                 } catch (e) {
-                      console.error(`[${this.constructor.name} ${this.config.id}] Error despawning finishTrigger:`, e);
-                 }
-             } else {
-                 console.log(`[${this.constructor.name} ${this.config.id}] FinishTrigger exists but is not marked as spawned.`);
-             }
+            if (this.finishTrigger.isSpawned) {
+                try {
+                    this.finishTrigger.despawn();
+                } catch (e) {
+                    console.error(`[${this.constructor.name} ${this.config.id}] Error despawning finishTrigger:`, e);
+                }
+            }
         } else {
             console.log(`[${this.constructor.name} ${this.config.id}] No finishTrigger found during cleanup.`);
         }
         
         // Completely null out all area components
         this.finishTrigger = null;
-        this.startArea = null;
         this.finishArea = null;
         this.checkpoints = [];
         this.qualifiedPlayerIds.clear();
         this.startingPlayerIds.clear(); // Clear starting players
         this.qualificationTarget = 0; 
         this.boundariesInitialized = false; // Reset initialization flag
-        console.log(`[${this.constructor.name} ${this.config.id}] Course areas and trigger cleared.`);
+        
+        // Then call parent cleanup
+        console.log(`[${this.constructor.name}] Calling LevelController cleanup`);
         super.cleanup(); // Call base cleanup (LevelController)
+        
+        console.log(`[${this.constructor.name}] Course level cleanup complete`);
     }
 } 

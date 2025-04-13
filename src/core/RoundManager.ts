@@ -4,6 +4,7 @@ import { EventEmitter } from '../utils/EventEmitter';
 import { type LevelConfiguration } from '../config/LevelConfiguration';
 import { LevelManager } from './LevelManager';
 import { gameConfig } from '../config/gameConfig';
+import { GameManager } from './GameManager';
 
 export class RoundManager {
     public events = new EventEmitter<{ 
@@ -19,14 +20,16 @@ export class RoundManager {
     private levelManager: LevelManager;
     private currentRound: number = 0;
     private usedLevelIds: Set<string> = new Set();
+    private gameManager: GameManager;
 
     // Store the bound listener reference for proper removal
     private boundHandleRoundEnd: (data: { q: string[], e: string[] }) => void;
 
-    constructor(world: World, initialPlayerIds: string[], levelManager: LevelManager) {
+    constructor(world: World, initialPlayerIds: string[], levelManager: LevelManager, gameManager: GameManager) {
         this.world = world;
         this.activePlayerIds = [...initialPlayerIds];
         this.levelManager = levelManager;
+        this.gameManager = gameManager;
         this.boundHandleRoundEnd = this.handleRoundEnd.bind(this);
         
         console.log(`[RoundManager] Initialized with ${initialPlayerIds.length} players`);
@@ -34,23 +37,40 @@ export class RoundManager {
     
     startNextRound(): void {
         this.currentRound++;
-        console.log(`[RoundManager] Starting logic for round ${this.currentRound}`);
         
         if (this.currentRound > gameConfig.maxRounds) {
-            console.log('[RoundManager] Max rounds reached, ending game');
             this.events.emit('GameEndConditionMet', 'MaxRoundsReached');
             return;
         }
         
         if (this.activePlayerIds.length <= 1 && this.currentRound > 1) {
-            console.log('[RoundManager] Only one or zero players left, ending game');
             this.events.emit('GameEndConditionMet', 'LastPlayerStanding');
             return;
         }
         
         const isFinalRound = this.currentRound === gameConfig.maxRounds;
         const availableConfigs = this.levelManager.getAvailableLevelConfigs();
+        
+        // More detailed debug logging
+        // First check for levels in debug mode - they get priority
+        const debugLevels = availableConfigs.filter(config => Boolean(config.debugMode));
+        
+		if (debugLevels.length > 0) {
+            debugLevels.forEach((level, index) => {
+                console.log(`[RoundManager] Debug level ${index}: ${level.id}, debugMode=${level.debugMode}`);
+            });
+            
+            const selectedLevelConfig = debugLevels[0]; // Just take the first debug level
+            const selectedLevelId = selectedLevelConfig.id;
+            // Don't add to usedLevelIds for debug levels - allow repeated selection
+            this.events.emit('BeforeRoundTransition', { nextLevelId: selectedLevelId, qualifiedPlayers: this.activePlayerIds });
+            
+			return;
+        } else {
+            console.log('[RoundManager] No debug levels found, proceeding with normal selection');
+        }
 
+        // If no debug levels, continue with normal selection logic
         let currentExcludeIds = Array.from(this.usedLevelIds);
         if (currentExcludeIds.length >= availableConfigs.length) {
              console.warn(`[RoundManager] Used all levels, allowing reuse.`);
@@ -59,7 +79,6 @@ export class RoundManager {
         } else if (currentExcludeIds.length === availableConfigs.length -1) {
              const lastUnused = availableConfigs.find(c => !this.usedLevelIds.has(c.id));
              if (lastUnused) {
-                 console.log(`[RoundManager] Only ${lastUnused.id} left, allowing it.`);
                  currentExcludeIds = currentExcludeIds.filter(id => id !== lastUnused.id);
              }
         }
@@ -122,11 +141,13 @@ export class RoundManager {
         });
         
         // Check game end conditions based on remaining players
-        if (this.activePlayerIds.length <= 1 && this.currentRound >= 1) { 
+        // End the game if only one player remains, regardless of round number
+        if (this.activePlayerIds.length <= 1) { 
             console.log('[RoundManager] Game end condition met after round results: LastPlayerStanding');
             this.events.emit('GameEndConditionMet', 'LastPlayerStanding');
             return false; // Game should end
         }
+        
         if (this.currentRound >= gameConfig.maxRounds) {
              console.log('[RoundManager] Game end condition met after round results: MaxRoundsReached');
              this.events.emit('GameEndConditionMet', 'MaxRoundsReached');
@@ -144,7 +165,39 @@ export class RoundManager {
         this.currentRound++;
         console.log(`[RoundManager] Starting selection logic for round ${this.currentRound}`);
         
+        // Check for any levels in debug mode first - they get absolute priority
+        const availableConfigs = this.levelManager.getAvailableLevelConfigs();
+        
+        // More detailed debug logging
+        console.log(`[RoundManager] Available levels total: ${availableConfigs.length}`);
+        console.log(`[RoundManager] Available level IDs: ${availableConfigs.map(c => c.id).join(', ')}`);
+        console.log(`[RoundManager] Debug flags: ${JSON.stringify(availableConfigs.map(c => ({id: c.id, debug: c.debugMode})))}`);
+        
+        const debugLevels = availableConfigs.filter(config => Boolean(config.debugMode));
+        console.log(`[RoundManager] Filtered debug levels: ${debugLevels.length}`);
+        
+        if (debugLevels.length > 0) {
+            debugLevels.forEach((level, index) => {
+                console.log(`[RoundManager] Debug level ${index}: ${level.id}, debugMode=${level.debugMode}`);
+            });
+            
+            console.log(`[RoundManager] Found ${debugLevels.length} level(s) in debug mode - selecting first one`);
+            const selectedLevelConfig = debugLevels[0]; // Just take the first debug level
+            const selectedLevelId = selectedLevelConfig.id;
+            
+            // Don't add to usedLevelIds for debug levels - allow repeated selection
+            
+            console.log(`[RoundManager] Debug mode: Selected level ${selectedLevelId}`);
+            this.events.emit('BeforeRoundTransition', { nextLevelId: selectedLevelId, qualifiedPlayers: this.activePlayerIds });
+            console.log(`[RoundManager] Emitted BeforeRoundTransition for level ${selectedLevelId}`);
+            return;
+        } else {
+            console.log('[RoundManager] No debug levels found, proceeding with normal selection');
+        }
+        
         // --- Select Next Level ---
+        // If no debug levels, continue with normal selection
+        
         // Check if we should force final round due to only 2 players remaining
         const onlyTwoPlayersRemain = this.activePlayerIds.length === 2;
         const isFinalRound = this.currentRound === gameConfig.maxRounds || onlyTwoPlayersRemain;
@@ -152,8 +205,6 @@ export class RoundManager {
         if (onlyTwoPlayersRemain) {
             console.log(`[RoundManager] Only 2 players remain - forcing FINAL ROUND selection`);
         }
-        
-        const availableConfigs = this.levelManager.getAvailableLevelConfigs(); 
 
         let currentExcludeIds = Array.from(this.usedLevelIds);
         if (currentExcludeIds.length >= availableConfigs.length) {
@@ -263,13 +314,37 @@ export class RoundManager {
         }
     }
     
+    /**
+     * Fully clean up this RoundManager instance.
+     * Clears all game state and unsubscribes from events.
+     */
     cleanup(): void {
-        console.log('[RoundManager] Cleaning up');
+        console.log('[RoundManager] Cleaning up and resetting all state');
+        
+        // First, unsubscribe from any active level events
+        this.unsubscribeFromActiveLevelEndEvent();
+        
+        // Reset round counter
         this.currentRound = 0;
+        
+        // Reset player tracking
         this.activePlayerIds = [];
         this.eliminatedPlayerIds.clear();
+        
+        // Reset used level tracking
         this.usedLevelIds.clear();
-        // Unsubscribe should be handled by GameManager before calling this
+        
+        // Emit one final event to notify any remaining listeners
+        try {
+            this.events.emit('RoundComplete', { 
+                qualifiedPlayers: [], 
+                eliminatedPlayers: [] 
+            });
+        } catch (error) {
+            console.error('[RoundManager] Error during cleanup event emit:', error);
+        }
+        
+        console.log('[RoundManager] Cleanup complete');
     }
     
     getLastPlayerId(): string | null {

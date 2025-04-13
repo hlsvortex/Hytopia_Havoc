@@ -12,11 +12,9 @@ export default class MainMenuPanel extends BasePanel {
                 <!-- Top navigation bar -->
                 <div class="top-nav">
                     <div class="nav-icons">
-                        <div class="nav-icon search-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
                         <div class="nav-icon home-icon active"><i class="fa-solid fa-house"></i></div>
                         <div class="nav-icon badge-icon"><i class="fa-solid fa-medal"></i></div>
                         <div class="nav-icon customize-icon"><i class="fa-solid fa-shirt"></i></div>
-                        <div class="nav-icon settings-icon"><i class="fa-solid fa-gear"></i></div>
                         <div class="nav-icon store-icon"><i class="fa-solid fa-cart-shopping"></i></div>
                         <div class="nav-icon profile-icon"><i class="fa-solid fa-user"></i></div>
                     </div>

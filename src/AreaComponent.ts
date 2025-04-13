@@ -1,4 +1,5 @@
 import { type Vector3Like } from 'hytopia';
+import { Team } from './enums/Team';
 
 /**
  * Represents a 3D area in the world defined by two corner coordinates.
@@ -12,14 +13,18 @@ export class AreaComponent {
 
 	// Optional height override for the area
 	private height: number | null = null;
+	
+	// Optional team assignment for this area
+	private team: Team = Team.None;
 
 	/**
 	 * Creates a new area component.
 	 * @param corner1 First corner position
 	 * @param corner2 Second corner position (opposite from corner1)
 	 * @param height Optional fixed height override for the area
+	 * @param team Optional team assignment for this area
 	 */
-	constructor(corner1: Vector3Like, corner2: Vector3Like, height?: number) {
+	constructor(corner1: Vector3Like, corner2: Vector3Like, height?: number, team: Team = Team.None) {
 		// Calculate min and max for each axis
 		this.min = {
 			x: Math.min(corner1.x, corner2.x),
@@ -36,6 +41,22 @@ export class AreaComponent {
 		if (height !== undefined) {
 			this.height = height;
 		}
+		
+		this.team = team;
+	}
+
+	/**
+	 * Get the team assigned to this area
+	 */
+	public getTeam(): Team {
+		return this.team;
+	}
+	
+	/**
+	 * Set the team for this area
+	 */
+	public setTeam(team: Team): void {
+		this.team = team;
 	}
 
 	/**
@@ -97,13 +118,15 @@ export class AreaComponent {
 	 * @param corner1 First block coordinate
 	 * @param corner2 Second block coordinate
 	 * @param height Optional fixed height
+	 * @param team Optional team assignment
 	 * @returns A new AreaComponent
 	 */
 	public static fromBlockCoordinates(
 		corner1: { x: number, y: number, z: number },
 		corner2: { x: number, y: number, z: number },
-		height?: number
+		height?: number,
+		team: Team = Team.None
 	): AreaComponent {
-		return new AreaComponent(corner1, corner2, height);
+		return new AreaComponent(corner1, corner2, height, team);
 	}
 } 

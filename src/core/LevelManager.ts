@@ -3,16 +3,18 @@ import { LevelController } from './LevelController';
 import { type LevelConfiguration } from '../config/LevelConfiguration';
 import { SeesawLevelController } from '../levels/SeesawLevelController';
 import { GateCrashLevelController } from '../levels/GateCrashLevelController';
+import { JumpClubLevelController } from '../levels/JumpClubLevelController';
 import { gameConfig } from '../config/gameConfig';
 import { UIBridge } from './UIBridge';
-
+import { GameManager } from './GameManager';
 /**
  * Central manager for all game levels
  */
 export class LevelManager {
 	private world: World;
 	private levelControllers: Map<string, LevelController> = new Map();
-	private players: Map<string, Player> = new Map();
+	private gameManager: GameManager;
+	//private players: Map<string, Player> = new Map();
 	private availableLevelConfigs: LevelConfiguration[];
 	private activeLevelController: LevelController | null = null;
 	private uiBridge: UIBridge | null = null;
@@ -22,9 +24,10 @@ export class LevelManager {
 	 * @param world The game world
 	 * @param uiBridge Optional initial UIBridge reference
 	 */
-	constructor(world: World, uiBridge: UIBridge | null = null) {
+	constructor(world: World, uiBridge: UIBridge | null = null, gameManager: GameManager) {
 		this.world = world;
 		this.uiBridge = uiBridge;
+		this.gameManager = gameManager;
 		this.availableLevelConfigs = gameConfig.availableLevels;
 		console.log('[LevelManager] Created Level Manager');
 		
@@ -60,9 +63,11 @@ export class LevelManager {
 		let newController: LevelController;
 		try {
 			if (config.controller === SeesawLevelController || config.id === 'seesaw') {
-				newController = new SeesawLevelController(this.world, config, this.uiBridge);
+				newController = new SeesawLevelController(this.world, config, this.uiBridge, this.gameManager);
 			} else if (config.controller === GateCrashLevelController || config.id === 'gatecrash') {
-				newController = new GateCrashLevelController(this.world, config, this.uiBridge);
+				newController = new GateCrashLevelController(this.world, config, this.uiBridge, this.gameManager);
+			} else if (config.controller === JumpClubLevelController || config.id === 'jumpclub') {
+				newController = new JumpClubLevelController(this.world, config, this.uiBridge, this.gameManager);
 			} else {
 				console.error(`[LevelManager] Unknown controller type configured for level ${config.id}`);
 				return null;
@@ -90,29 +95,30 @@ export class LevelManager {
 		
 		if (this.activeLevelController) {
 			const previousLevelName = this.activeLevelController.getLevelName();
-			console.log(`[LevelManager] Cleaning up previous active level: ${previousLevelName}`);
 			try {
 				this.activeLevelController.cleanup();
 			} catch (error) {
 				console.error(`[LevelManager] Error during cleanup of ${previousLevelName}:`, error);
 			}
+	
 			this.activeLevelController = null;
 		}
 
 		const controller = this.levelControllers.get(id);
+
+		console.log(`[LevelManager] Activating level controller: ${controller?.constructor.name}`);
+
 		if (!controller) {
-			console.error(`[LevelManager] Controller for level ID ${id} not found or not created.`);
+			console.error(`[LevelManager] Level controller not found for ID: ${id}`);
 			return false;
 		}
 
 		try {
-			console.log(`[LevelManager] Found controller: ${controller.constructor.name}. Calling activate...`);
-			controller.activate();
+			controller.loadLevel();
 			this.activeLevelController = controller;
-			console.log(`[LevelManager] Successfully activated level: ${id} (${controller.getLevelName()})`);
 			return true;
-		} catch (err) {
-			console.error(`[LevelManager] Failed during activation of level ${id}:`, err);
+		} catch (error) {
+			console.error(`[LevelManager] Error during level controller activation:`, error);
 			this.activeLevelController = null;
 			return false;
 		}
@@ -133,6 +139,10 @@ export class LevelManager {
 	public getActiveLevelController(): LevelController | null {
 		console.log(`[LevelManager] getActiveLevelController called. Returning: ${this.activeLevelController ? this.activeLevelController.constructor.name : 'null'}`);
 		return this.activeLevelController;
+	}
+
+	public getActiveLevelConfig(): LevelConfiguration | null {
+		return this.activeLevelController?.getLevelConfig() || null;
 	}
 
 	/**
@@ -158,20 +168,6 @@ export class LevelManager {
 		} else {
 			console.warn('[LevelManager] Cannot end round - no active level controller');
 		}
-	}
-
-	/**
-	 * Register a player with the Level Manager (can be passed to level later)
-	 */
-	public registerPlayer(player: Player): void {
-		this.players.set(player.id, player);
-	}
-
-	/**
-	 * Unregister a player from the level manager
-	 */
-	public unregisterPlayer(playerId: string): void {
-		this.players.delete(playerId);
 	}
 
 	/**
@@ -201,7 +197,6 @@ export class LevelManager {
 	public reset(): void {
 		this.cleanup();
 		this.levelControllers.clear();
-		this.players.clear();
 		this.loadAvailableLevels();
 		console.log('[LevelManager] LevelManager fully reset.');
 	}

@@ -237,14 +237,21 @@ export class UIBridge {
      */
     public updatePlayerStats(player: Player, playerData: any): void {
         console.log(`[UIBridge] Updating player stats for ${player.id}`);
+        
+        // Get the player entity to find model URI if available
+        const playerEntity = playerData.playerEntity;
+        const modelUri = playerEntity?.modelUri || 'models/players/player.gltf';
+        
         this.sendDataToPlayer(player, {
             type: 'PLAYER_DATA_UPDATE',
             playerData: {
+                playerName: playerData.playerName || player.id,
                 level: playerData.playerLevel,
                 xp: playerData.playerXP,
                 coins: playerData.coins,
                 crowns: playerData.crowns,
-                wins: playerData.wins
+                wins: playerData.wins,
+                modelUri: modelUri
             }
         });
     }

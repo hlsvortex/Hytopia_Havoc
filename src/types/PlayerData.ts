@@ -19,12 +19,14 @@ export class PlayerData {
 	playerController: PlayerController | null;
 	playerEntity: PlayerEntity | null;
 
+	playerName: string;
 	playerLevel: number;
 	playerXP: number;
 	coins: number;
 	crowns: number;
 	ownedItemIds: string[];
 	wins: number;
+	modelUri: string;
 	team: Team;
 	lastUpdated: number;
 
@@ -32,12 +34,14 @@ export class PlayerData {
 		this.player = player;
 		this.playerController = null;
 		this.playerEntity = null;
+		this.playerName = player.id || "Player";
 		this.playerLevel = 1;
 		this.playerXP = 0;
 		this.coins = 0;
 		this.crowns = 0;
 		this.ownedItemIds = [];
 		this.wins = 0;
+		this.modelUri = "models/players/player.gltf";
 		this.lastUpdated = Date.now();
 		this.team = Team.None;
 	}
@@ -47,12 +51,14 @@ export class PlayerData {
 	 */
 	toJSON(): PlayerDataJSON {
 		return {
+			playerName: this.playerName,
 			level: this.playerLevel,
 			xp: this.playerXP,
 			coins: this.coins,
 			crowns: this.crowns,
 			ownedItemIds: this.ownedItemIds,
 			wins: this.wins,
+			modelUri: this.modelUri,
 			lastUpdated: this.lastUpdated
 		};
 	}
@@ -61,12 +67,14 @@ export class PlayerData {
 	 * Update player data from JSON
 	 */
 	fromJSON(data: PlayerDataJSON): void {
+		this.playerName = data.playerName || this.player.id || "Player";
 		this.playerLevel = data.level ?? 1;
 		this.playerXP = data.xp ?? 0;
 		this.coins = data.coins ?? 0;
 		this.crowns = data.crowns ?? 0;
 		this.ownedItemIds = data.ownedItemIds ?? [];
 		this.wins = data.wins ?? 0;
+		this.modelUri = data.modelUri ?? "models/players/player.gltf";
 		this.lastUpdated = data.lastUpdated ?? Date.now();
 	}
 

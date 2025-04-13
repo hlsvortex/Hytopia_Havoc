@@ -1,8 +1,10 @@
 import { BasePanel } from '../BasePanel.js';
+import { ModelViewer } from '../ModelViewer.js';
 
 export default class MainMenuPanel extends BasePanel {
     constructor() {
         super('main-menu-panel');
+        this.modelViewer = null;
         this.init();
     }
 
@@ -37,9 +39,11 @@ export default class MainMenuPanel extends BasePanel {
 
                 <!-- Character display in center -->
                 <div class="character-display">
-                    <!-- Character will be shown here -->
-                    <div class="character-placeholder">
-                        <i class="fa-solid fa-person fa-5x"></i>
+                    <!-- Player name above character -->
+                    <div class="player-name">PLAYER</div>
+                    <!-- 3D model viewer -->
+                    <div class="model-viewer-container">
+                        <canvas id="character-model-canvas"></canvas>
                     </div>
                 </div>
                 
@@ -76,6 +80,33 @@ export default class MainMenuPanel extends BasePanel {
         `;
 
         this.addEventListeners();
+    }
+
+    openPanel() {
+        super.openPanel();
+        
+        // Initialize the model viewer when the panel opens if it hasn't been initialized yet
+        if (!this.modelViewer) {
+            setTimeout(() => {
+                if (document.getElementById('character-model-canvas')) {
+                    this.modelViewer = new ModelViewer('character-model-canvas');
+                    console.log('Model viewer initialized');
+                    
+                    // Note: the ModelViewer automatically loads the default model in its constructor
+                }
+            }, 100);
+        }
+    }
+
+    handlePlayerModelUpdate(modelUri) {
+        if (!this.modelViewer) {
+            console.warn('Model viewer not initialized yet');
+            return;
+        }
+        
+        // Default to the base player model if none specified
+		const modelPath = '/{{CDN_ASSETS_URL}}/models/players/player.gltf';
+        this.modelViewer.loadModel(modelPath);
     }
 
     addEventListeners() {
@@ -192,6 +223,14 @@ export default class MainMenuPanel extends BasePanel {
         
         console.log('Updating player data', playerData);
         
+        // Update player name if available
+        if (playerData.playerName) {
+            const playerNameElement = this.container.querySelector('.player-name');
+            if (playerNameElement) {
+                playerNameElement.textContent = playerData.playerName;
+            }
+        }
+        
         // Update currency values (coins and crowns)
         if (playerData.coins !== undefined) {
             const kudosAmount = this.container.querySelector('.kudos .currency-amount');
@@ -229,6 +268,11 @@ export default class MainMenuPanel extends BasePanel {
                 // Show current level XP and XP needed for next level
                 xpText.innerHTML = `<span class="current-xp">${currentXP}</span> / <span class="next-level-xp">${nextLevelXP}</span> XP`;
             }
+        }
+        
+        // Update player model if available
+        if (playerData.modelUri) {
+            this.handlePlayerModelUpdate(playerData.modelUri);
         }
     }
 } 

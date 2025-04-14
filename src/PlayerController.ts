@@ -95,7 +95,7 @@ export default class PlayerController extends MyEntityController {
 
 		// Check if player has fallen below threshold
 		if (entity.position.y < this.fallThresholdY) {
-			console.log(`Player fell below threshold (${this.fallThresholdY}), initiating respawn`);
+			//console.log(`Player fell below threshold (${this.fallThresholdY}), initiating respawn`);
 			const respawnPosition = this.lastCheckpointPosition || { x: 0, y: 10, z: 0 }; 
 			this.handleFall(entity, respawnPosition); 
 		}

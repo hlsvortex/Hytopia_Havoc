@@ -3,6 +3,7 @@ import { GateCrashLevelController } from '../levels/GateCrashLevelController';
 import { SeesawLevelController } from '../levels/SeesawLevelController';
 import { JumpClubLevelController } from '../levels/JumpClubLevelController';
 import { TopDropLevelController } from '../levels/TopDropLevelController';
+import { BlockPartyLevelController } from '../levels/BlockPartyLevelController';
 // Import other level controllers later...
 
 export const gameConfig = {
@@ -34,6 +35,12 @@ export const gameConfig = {
 			id: "rotatingbeam",
 			name: "Spinning Beam Blitz",
 			mapPath: "assets/rotating_beam.json", // Create this map file
+			difficulty: "medium"
+		},
+		blockparty: {
+			id: "blockparty",
+			name: "Block Party",
+			mapPath: "assets/block_party.json",
 			difficulty: "medium"
 		}
 	},
@@ -96,11 +103,11 @@ export const gameConfig = {
 			id: 'topdrop',
 			mapName: 'assets/top_drop.json',
 			displayName: 'Top Drop',
-			description: 'Dodge the spinning beams and make it to the finish line!',
+			description: 'Keep moving while the platforms disappear!',
 			controller: TopDropLevelController,
 			levelType: 'Survival',
 			minPlayers: 1,
-			maxPlayers: 10,
+			maxPlayers: 15,
 			minRound: 1,
 			maxRound: 4,
 			isFinalRound: true,
@@ -111,6 +118,28 @@ export const gameConfig = {
 			showTimer: false,
 			timeLimitSeconds: 0,
 			//debugMode: true
+		},
+		{
+			id: 'blockparty',
+			mapName: 'assets/block_party.json',
+			displayName: 'Block Party',
+			description: 'Dodge the moving blocks and stay on the platform!',
+			controller: BlockPartyLevelController,
+			levelType: 'Survival',
+			minPlayers: 1,
+			maxPlayers: 20,
+			minRound: 1,
+			maxRound: 4,
+			isFinalRound: false,
+			qualificationSlotsRatio: 0.5,
+			difficulty: 'hard',
+			qualifyCondition: 'Survive',
+			onPlayerDeath: 'Eliminated',
+			showTimer: true,
+			timeLimitSeconds: 180,
+			blockSpawnInterval: 2000, // Spawn blocks every 2 seconds
+			blockSpeed: 1.0, // Default speed
+			debugMode: true
 		},
 	] as LevelConfiguration[],
 }; 

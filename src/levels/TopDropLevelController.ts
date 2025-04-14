@@ -1,4 +1,4 @@
-import { World, PlayerEntity, Entity, type Vector3Like, Player, EntityEvent, WorldEvent } from 'hytopia';
+import { World, Player, PlayerEntity, type Vector3Like } from 'hytopia';
 import { SurvivalLevelController } from '../core/SurvivalLevelController';
 import { type LevelConfiguration } from '../config/LevelConfiguration';
 import { UIBridge } from '../core/UIBridge';
@@ -11,11 +11,13 @@ import { Logger } from '../utils/Logger';
  * 
  * Configuration options:
  * - blockDisappearTime: Time in milliseconds before a block disappears (default: 500ms)
+ * - floorLevel: The Y coordinate for the floor (default: 41)
  * 
  * Example config:
  * {
  *   id: 'topdrop',
  *   blockDisappearTime: 1000, // 1 second
+ *   floorLevel: 45, // Set custom floor level
  *   showTimer: false, // Hide the timer (inherited from SurvivalLevelController)
  *   // other standard level config properties
  * }
@@ -26,7 +28,8 @@ export class TopDropLevelController extends SurvivalLevelController {
     private floorLevel: number = 41; // Default floor Y coordinate
     private blockDisappearTime: number = 500; // Default time in ms before blocks disappear
     private logger = new Logger('TopDropLevelController');
-	private blockRemovalInterval: NodeJS.Timeout | null = null;
+    private blockRemovalInterval: NodeJS.Timeout | null = null;
+    
     /**
      * Create a new TopDrop level controller
      * @param world Game world
@@ -49,6 +52,12 @@ export class TopDropLevelController extends SurvivalLevelController {
             this.logger.log(`Block disappear time set to ${this.blockDisappearTime}ms from config`);
         } else {
             this.logger.log(`Using default block disappear time: ${this.blockDisappearTime}ms`);
+        }
+        
+        // Check if floorLevel is specified in config
+        if (config && typeof (config as any).floorLevel === 'number') {
+            this.floorLevel = (config as any).floorLevel;
+            this.logger.log(`Floor level set to Y=${this.floorLevel} from config`);
         }
         
         // Set TopDrop-specific goal message
@@ -81,38 +90,27 @@ export class TopDropLevelController extends SurvivalLevelController {
      * Set up the tick handler to check for players standing on blocks and make them disappear
      */
     protected startTickHandler(): void {
-        /*
-		// Clear any existing tick listener
-        if (this.tickListener) {
-			this.world.off(EntityEvent.TICK, this.onTick);
-            this.tickListener = null;
+        // Clear any existing interval
+        if (this.blockRemovalInterval) {
+            clearInterval(this.blockRemovalInterval);
+            this.blockRemovalInterval = null;
         }
-        */
-        // Set up new tick listener
-        //this.tickListener = this.onTick.bind(this);
-		//this.world.on(EntityEvent.TICK, this.onTick.bind(this));
-		
-		if (this.blockRemovalInterval) {
-			clearInterval(this.blockRemovalInterval);
-			this.blockRemovalInterval = null;
-		}
 
-		this.blockRemovalInterval = setInterval(() => {
-			this.onTick();
-		}, 50);
+        // Set up new interval for block checking
+        this.blockRemovalInterval = setInterval(() => {
+            this.checkBlocksUnderPlayers();
+        }, 50);
 
         this.logger.log('Tick handler set up');
     }
     
     /**
-     * Process tick updates
+     * Process tick updates - check for blocks under players and schedule them for removal
      */
-    private onTick(): void {
+    private checkBlocksUnderPlayers(): void {
         const currentTime = Date.now();
         const blocksToRemove: string[] = [];
         
-		//this.logger.log(`Current time: ${currentTime}`);
-
         // Check which blocks need to be removed
         this.disappearingBlocks.forEach((disappearTime, blockKey) => {
             if (currentTime >= disappearTime) {
@@ -126,7 +124,7 @@ export class TopDropLevelController extends SurvivalLevelController {
                 
                 // Remove the block
                 try {
-                    this.world.chunkLattice.setBlock({x, y, z}, 0);
+                    this.world.chunkLattice.setBlock({ x, y, z }, 0);
                     this.logger.log(`Removed block at ${x}, ${y}, ${z}`);
                 } catch (error) {
                     this.logger.error(`Failed to remove block at ${x}, ${y}, ${z}: ${error}`);
@@ -153,20 +151,13 @@ export class TopDropLevelController extends SurvivalLevelController {
             // Get player position
             const position = playerEntity.position;
             
-          
             // Check the block beneath the player
             const blockPos = {
                 x: Math.floor(position.x),
-                y: Math.floor(position.y)-1, // Block beneath player
+                y: Math.floor(position.y) - 1, // Block beneath player
                 z: Math.floor(position.z)
             };
 
-            // Get previous position (for debug purposes)
-            const lastPos = this.playerPositions.get(playerId);
-            
-            // Always update the block beneath the player regardless of horizontal movement
-            // This ensures blocks disappear when landing from jumps or falls
-            
             // Update player position tracking
             this.playerPositions.set(playerId, { ...position });
             
@@ -182,7 +173,6 @@ export class TopDropLevelController extends SurvivalLevelController {
                     if (!this.disappearingBlocks.has(blockKey)) {
                         // Schedule block to disappear using configured time
                         this.disappearingBlocks.set(blockKey, Date.now() + this.blockDisappearTime);
-                        //this.logger.log(`Player stepped on block at ${blockKey}, scheduled for removal in ${this.blockDisappearTime}ms`);
                     }
                 }
             } catch (error) {
@@ -191,10 +181,13 @@ export class TopDropLevelController extends SurvivalLevelController {
         }
     }
 
-	public override beginGameplay(): void {
-		super.beginGameplay();
-		this.startTickHandler();
-	}
+    /**
+     * Begin gameplay - start tick handler and activate parent behavior
+     */
+    public override beginGameplay(): void {
+        super.beginGameplay();
+        this.startTickHandler();
+    }
     
     /**
      * Start the round
@@ -208,8 +201,6 @@ export class TopDropLevelController extends SurvivalLevelController {
         
         // Clear player position tracking
         this.playerPositions.clear();
-        
-       
     }
     
     /**
@@ -224,9 +215,12 @@ export class TopDropLevelController extends SurvivalLevelController {
         // Clear player positions
         this.playerPositions.clear();
         
-		if (this.blockRemovalInterval) {
-			clearInterval(this.blockRemovalInterval);
-		}
+        // Clear interval
+        if (this.blockRemovalInterval) {
+            clearInterval(this.blockRemovalInterval);
+            this.blockRemovalInterval = null;
+        }
+        
         // Call parent cleanup
         super.cleanup();
     }

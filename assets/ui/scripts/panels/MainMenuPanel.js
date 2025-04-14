@@ -63,11 +63,6 @@ export default class MainMenuPanel extends BasePanel {
                 
                 <!-- Show selector at bottom right -->
                 <div class="show-selector-container">
-                    <div class="show-selector-button">
-                        <span>SHOW SELECTOR</span>
-                        <div class="key-shortcut">Ctrl</div>
-                    </div>
-                    
                     <!-- Play button -->
                     <div class="play-button-container">
                         <button class="play-button">

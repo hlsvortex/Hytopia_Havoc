@@ -4,6 +4,7 @@ import { SeesawLevelController } from '../levels/SeesawLevelController';
 import { JumpClubLevelController } from '../levels/JumpClubLevelController';
 import { TopDropLevelController } from '../levels/TopDropLevelController';
 import { BlockPartyLevelController } from '../levels/BlockPartyLevelController';
+import { BounceRushLevelController } from '../levels/BounceRushLevelController';
 // Import other level controllers later...
 
 export const gameConfig = {
@@ -81,6 +82,23 @@ export const gameConfig = {
 			//debugMode: true
 		},
 		{
+			id: 'bouncerush',
+			mapName: 'assets/bounce_rush.json',
+			displayName: 'Bounce Rush',
+			controller: BounceRushLevelController,
+			levelType: 'Qualification',
+			minPlayers: 1,
+			maxPlayers: 24,
+			minRound: 1,
+			maxRound: 4,
+			isFinalRound: false,
+			qualificationSlotsRatio: 0.66,
+			difficulty: 'medium',
+			qualifyCondition: 'PassFinishLine',
+			onPlayerDeath: 'RespawnAtCheckPoint',
+			debugMode: true
+		},
+		{
 			id: 'jumpclub',
 			mapName: 'assets/jump_club.json',
 			displayName: 'Spinning Beam Blitz',
@@ -139,7 +157,7 @@ export const gameConfig = {
 			timeLimitSeconds: 180,
 			blockSpawnInterval: 2000, // Spawn blocks every 2 seconds
 			blockSpeed: 1.0, // Default speed
-			debugMode: true
+			//debugMode: true
 		},
 	] as LevelConfiguration[],
 }; 

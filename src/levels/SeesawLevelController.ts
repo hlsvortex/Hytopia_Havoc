@@ -39,7 +39,7 @@ export class SeesawLevelController extends CourseLevelController {
 		this.clearAndSetStartArea(
 			{ x: 10, y: 2, z: -7 },
 			{ x: -10, y: 2, z: 7 },
-			1 // Spawn Height
+			2 // Spawn Height
 		);
 
 		// Example Finish Area (needs coordinates from the end of the map)

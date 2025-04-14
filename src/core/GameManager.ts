@@ -285,7 +285,7 @@ export class GameManager {
 		// DO NOT CHANGE THIS CODE - IT IS CORRECT
 		player.camera.setMode(PlayerCameraMode.FIRST_PERSON);
 		player.camera.setForwardOffset(-6); 
-		player.camera.setOffset({ x: 0, y: 2, z: 0 });
+		player.camera.setOffset({ x: 0, y: 1.5, z: 0 });
 		player.camera.setAttachedToEntity(playerEntity);
 		
 		this.world.chatManager.sendPlayerMessage(player, `Use WASD to move, Space to jump.`);

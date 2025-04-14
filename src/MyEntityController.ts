@@ -62,7 +62,7 @@ export default class MyEntityController extends BaseEntityController {
 	private wantedDeltaVelocities: Vector3Like = { x: 0, y: 0, z: 0 };
 
 	protected resetInput: boolean = true;
-
+	
 	/**
 	 * A function allowing custom logic to determine if the entity can walk.
 	 * @param myEntityController - The entity controller instance.
@@ -253,8 +253,18 @@ export default class MyEntityController extends BaseEntityController {
 			entity.startModelLoopedAnimations(idleAnimations);
 		}
 
+
+		let lerpFactor = 3 * deltaTimeMs / 1000;
+
+		if (w || a || s || d) {
+			lerpFactor = 3 * deltaTimeMs / 1000;
+		}
+		else {
+			lerpFactor = 6 * deltaTimeMs / 1000;
+		}
+
 		// Calculate target horizontal velocities (run/walk)
-		if ((isRunning && this.canRun(this)) || (!isRunning && this.canWalk(this))) {
+		if ((isRunning && this.canRun(this)) || (!isRunning && this.canWalk(this)) || (this.jumpCount > 0)) {
 			const velocity = isRunning ? this.runVelocity : this.walkVelocity;
 
 			if (w) {
@@ -276,7 +286,7 @@ export default class MyEntityController extends BaseEntityController {
 				targetVelocities.x += velocity * Math.cos(yaw);
 				targetVelocities.z -= velocity * Math.sin(yaw);
 			}
-
+			
 			// Normalize for diagonals
 			const length = Math.sqrt(targetVelocities.x * targetVelocities.x + targetVelocities.z * targetVelocities.z);
 			if (length > velocity) {
@@ -284,6 +294,8 @@ export default class MyEntityController extends BaseEntityController {
 				targetVelocities.x *= factor;
 				targetVelocities.z *= factor;
 			}
+
+		
 		}
 
 		// Calculate target vertical velocity (jump)
@@ -314,14 +326,24 @@ export default class MyEntityController extends BaseEntityController {
 			this.jumpCount = 0;
 		}
 
-		let lerpFactor = 1 * deltaTimeMs / 1000;
+		if (!this.isGrounded) {
+			const mass = entity.mass;
+			this.wantedDeltaVelocities = Vector3.fromVector3Like(this.wantedDeltaVelocities).lerp(Vector3.fromVector3Like(targetVelocities), lerpFactor);
+			this.wantedDeltaVelocities.y = targetVelocities.y;
 
-		if (w || a || s || d) {
-			lerpFactor = 2 * deltaTimeMs / 1000;
+			const deltaVelocities = {
+				x: this.wantedDeltaVelocities.x - currentVelocity.x,
+				y: this.wantedDeltaVelocities.y,
+				z: this.wantedDeltaVelocities.z - currentVelocity.z,
+			};
+
+			entity.applyImpulse({ // multiply by mass for the impulse to result in applying the correct target velocity
+				x: deltaVelocities.x * mass,
+				y: deltaVelocities.y * mass,
+				z: deltaVelocities.z * mass,
+			});
 		}
-		else {
-			lerpFactor = 6 * deltaTimeMs / 1000;
-		}
+
 
 		this.wantedDeltaVelocities = Vector3.fromVector3Like(this.wantedDeltaVelocities).lerp(Vector3.fromVector3Like(targetVelocities), lerpFactor);
 
@@ -343,7 +365,7 @@ export default class MyEntityController extends BaseEntityController {
 
 
 
-		if (!hasExternalVelocity) { // allow external velocities to resolve, otherwise our deltas will cancel them out.
+		if (!hasExternalVelocity ) { // allow external velocities to resolve, otherwise our deltas will cancel them out.
 			if (Object.values(deltaVelocities).some(v => v !== 0)) {
 				const mass = entity.mass;
 

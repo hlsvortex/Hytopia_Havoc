@@ -9,6 +9,7 @@ import { UIBridge } from './UIBridge';
 import { GameManager } from './GameManager';
 import { TopDropLevelController } from '../levels/TopDropLevelController';
 import { BlockPartyLevelController } from '../levels/BlockPartyLevelController';
+import { BounceRushLevelController } from '../levels/BounceRushLevelController';
 /**
  * Central manager for all game levels
  */
@@ -74,6 +75,8 @@ export class LevelManager {
 				newController = new TopDropLevelController(this.world, config, this.uiBridge, this.gameManager);
 			} else if (config.controller === BlockPartyLevelController || config.id === 'blockparty') {
 				newController = new BlockPartyLevelController(this.world, config, this.uiBridge, this.gameManager);
+			} else if (config.controller === BounceRushLevelController || config.id === 'bouncerush') {
+				newController = new BounceRushLevelController(this.world, config, this.uiBridge, this.gameManager);
 			} else {
 				console.error(`[LevelManager] Unknown controller type configured for level ${config.id}`);
 				return null;

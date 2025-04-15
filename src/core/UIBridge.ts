@@ -234,6 +234,8 @@ export class UIBridge {
             type: 'SHOW_PLAYER_SUMMARY',
             ...summaryData
         });
+
+		player.ui.lockPointer(false);
     }
     
     // Added method to close the player summary screen

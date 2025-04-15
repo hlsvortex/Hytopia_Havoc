@@ -48,16 +48,16 @@ export class SeesawLevelController extends CourseLevelController {
 		
 
 		this.addCheckpointArea(
-			{ x: 3, y: 1, z:89 },//225
+			{ x: 3, y: 3, z:89 },//225
 			{ x: -2, y: 5, z: 95 }//237	
 		);
 
 		this.addCheckpointArea(
-			{ x: 17, y: 1, z: 89 },//225
+			{ x: 17, y: 3, z: 89 },//225
 			{ x: 13, y: 5, z: 95 }//237	
 		);
 		this.addCheckpointArea(
-			{ x: -17, y: 1, z: 89 },//225
+			{ x: -17, y: 3, z: 89 },//225
 			{ x: -13, y: 5, z: 95 }//237	
 		);
 

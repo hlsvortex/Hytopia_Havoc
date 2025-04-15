@@ -151,6 +151,10 @@ export class TopDropLevelController extends SurvivalLevelController {
             // Get player position
             const position = playerEntity.position;
             
+            // Calculate the fractional parts of position to check if near an edge
+            const xFraction = position.x - Math.floor(position.x);
+            const zFraction = position.z - Math.floor(position.z);
+            
             // Check the block beneath the player
             const blockPos = {
                 x: Math.floor(position.x),
@@ -161,23 +165,103 @@ export class TopDropLevelController extends SurvivalLevelController {
             // Update player position tracking
             this.playerPositions.set(playerId, { ...position });
             
-            try {
-                // Get block at position
-                const blockId = this.world.chunkLattice.getBlockId(blockPos);
-                
-                // If there's a block (not air) and it's not already scheduled for removal
-                if (blockId !== 0) {
-                    const blockKey = `${blockPos.x},${blockPos.y},${blockPos.z}`;
-                    
-                    // If not already scheduled to disappear
-                    if (!this.disappearingBlocks.has(blockKey)) {
-                        // Schedule block to disappear using configured time
-                        this.disappearingBlocks.set(blockKey, Date.now() + this.blockDisappearTime);
-                    }
-                }
-            } catch (error) {
-                this.logger.error(`Error checking block beneath player: ${error}`);
+            // Mark blocks for disappearing
+            this.checkAndMarkBlock(blockPos);
+            
+            // Check adjacent blocks if player is close to an edge (within 0.1 units)
+            const edgeThreshold = 0.1;
+            
+            // Check if near left edge (low X)
+            if (xFraction <= edgeThreshold) {
+                this.checkAndMarkBlock({
+                    x: blockPos.x - 1,
+                    y: blockPos.y,
+                    z: blockPos.z
+                });
             }
+            
+            // Check if near right edge (high X)
+            if (xFraction >= (1 - edgeThreshold)) {
+                this.checkAndMarkBlock({
+                    x: blockPos.x + 1,
+                    y: blockPos.y,
+                    z: blockPos.z
+                });
+            }
+            
+            // Check if near back edge (low Z)
+            if (zFraction <= edgeThreshold) {
+                this.checkAndMarkBlock({
+                    x: blockPos.x,
+                    y: blockPos.y,
+                    z: blockPos.z - 1
+                });
+            }
+            
+            // Check if near front edge (high Z)
+            if (zFraction >= (1 - edgeThreshold)) {
+                this.checkAndMarkBlock({
+                    x: blockPos.x,
+                    y: blockPos.y,
+                    z: blockPos.z + 1
+                });
+            }
+            
+            // Check diagonal blocks if in corner
+            if (xFraction <= edgeThreshold && zFraction <= edgeThreshold) {
+                this.checkAndMarkBlock({
+                    x: blockPos.x - 1,
+                    y: blockPos.y,
+                    z: blockPos.z - 1
+                });
+            }
+            
+            if (xFraction <= edgeThreshold && zFraction >= (1 - edgeThreshold)) {
+                this.checkAndMarkBlock({
+                    x: blockPos.x - 1,
+                    y: blockPos.y,
+                    z: blockPos.z + 1
+                });
+            }
+            
+            if (xFraction >= (1 - edgeThreshold) && zFraction <= edgeThreshold) {
+                this.checkAndMarkBlock({
+                    x: blockPos.x + 1,
+                    y: blockPos.y,
+                    z: blockPos.z - 1
+                });
+            }
+            
+            if (xFraction >= (1 - edgeThreshold) && zFraction >= (1 - edgeThreshold)) {
+                this.checkAndMarkBlock({
+                    x: blockPos.x + 1,
+                    y: blockPos.y,
+                    z: blockPos.z + 1
+                });
+            }
+        }
+    }
+    
+    /**
+     * Check if a block exists at position and mark it for disappearing
+     */
+    private checkAndMarkBlock(blockPos: Vector3Like): void {
+        try {
+            // Get block at position
+            const blockId = this.world.chunkLattice.getBlockId(blockPos);
+            
+            // If there's a block (not air) and it's not already scheduled for removal
+            if (blockId !== 0) {
+                const blockKey = `${blockPos.x},${blockPos.y},${blockPos.z}`;
+                
+                // If not already scheduled to disappear
+                if (!this.disappearingBlocks.has(blockKey)) {
+                    // Schedule block to disappear using configured time
+                    this.disappearingBlocks.set(blockKey, Date.now() + this.blockDisappearTime);
+                }
+            }
+        } catch (error) {
+            this.logger.error(`Error checking block at position (${blockPos.x}, ${blockPos.y}, ${blockPos.z}): ${error}`);
         }
     }
 

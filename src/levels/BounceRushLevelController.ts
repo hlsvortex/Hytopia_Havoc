@@ -43,9 +43,14 @@ export class BounceRushLevelController extends CourseLevelController {
 			2 // Spawn Height
 		);
 
+		this.addCheckpointArea(
+			{ x: 14, y: 1, z: 114 },
+			{ x: -14, y: 22, z: 118 }
+		);
+
 		this.setFinishArea(
-			{ x: 13, y: 1, z: 222-150 },
-			{ x: -13, y: 22, z: 236-150 }
+			{ x: 13, y: 1, z: 222 },
+			{ x: -13, y: 22, z: 236 }
 		);
 	}
 

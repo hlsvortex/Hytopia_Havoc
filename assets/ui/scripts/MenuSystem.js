@@ -158,15 +158,6 @@ export class MenuSystem {
     initGlobalListeners() {
         console.log('Setting up global listeners');
         
-        // Add global key listeners for menu navigation
-        document.addEventListener('keydown', (e) => {
-            // Handle Escape key for closing menus
-            if (e.key === 'Escape') {
-                // Close all menus except HUD
-                this.closeAllMenus();
-                return;
-            }
-        });
         
         // Prevent cursor locking when clicking on UI elements
         document.addEventListener('click', (e) => {

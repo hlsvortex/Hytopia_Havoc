@@ -226,5 +226,6 @@ export class PlayerInventoryManager {
         this.deductCurrency(item.cost);
         this.unlockItem(itemId);
         return true;
-    }
+  
+	}
 } 

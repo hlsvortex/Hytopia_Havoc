@@ -211,4 +211,20 @@ export default class RotatingBeamEntity extends ObstacleEntity {
         console.log(`[RotatingBeamEntity ${this.name || this.id}] Stopping rotation`);
         this.stopRotation();
     }
+    
+    /**
+     * Get the current rotation speed in degrees per second
+     */
+    public getRotationSpeed(): number {
+        return this.rotationSpeed;
+    }
+    
+    /**
+     * Set a new rotation speed in degrees per second
+     * @param speed New rotation speed
+     */
+    public setRotationSpeed(speed: number): void {
+        this.rotationSpeed = speed;
+        console.log(`[RotatingBeamEntity ${this.name || this.id}] Speed set to ${speed.toFixed(1)} degrees/sec`);
+    }
 } 

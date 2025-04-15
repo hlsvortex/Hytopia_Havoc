@@ -45,10 +45,26 @@ export class SeesawLevelController extends CourseLevelController {
 		// Example Finish Area (needs coordinates from the end of the map)
 		// Calculate Z based on the last obstacle added
 
+		
+
+		this.addCheckpointArea(
+			{ x: 3, y: 1, z:89 },//225
+			{ x: -2, y: 5, z: 95 }//237	
+		);
+
+		this.addCheckpointArea(
+			{ x: 17, y: 1, z: 89 },//225
+			{ x: 13, y: 5, z: 95 }//237	
+		);
+		this.addCheckpointArea(
+			{ x: -17, y: 1, z: 89 },//225
+			{ x: -13, y: 5, z: 95 }//237	
+		);
+
 
 		this.setFinishArea(
-			{ x: 10, y: 1, z:46 },//225
-			{ x: -10, y: 5, z: 61 }//237	
+			{ x: 10, y: 1, z: 225 },//225
+			{ x: -10, y: 5, z: 237 }//237	
 		);
 
 	}

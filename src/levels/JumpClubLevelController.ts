@@ -13,6 +13,11 @@ import { Team } from '../enums/Team';
 export class JumpClubLevelController extends SurvivalLevelController {
     private beams: RotatingBeamEntity[] = [];
     private difficulty: 'easy' | 'medium' | 'hard' = 'medium';
+    private lowerBeam: RotatingBeamEntity | null = null;  // Track the lower beam specifically
+    private speedIncreaseInterval: NodeJS.Timeout | null = null;  // Timer for speed increases
+    private speedIncreaseFactor: number = 1.2;  // Factor to multiply speed by each interval
+    private baseSpeed: number = 25;  // Initial speed of lower beam
+    private speedIncreaseSeconds: number = 10;  // Interval between speed increases
    
     /**
      * Create a new rotating beam level controller
@@ -31,6 +36,19 @@ export class JumpClubLevelController extends SurvivalLevelController {
         // Check if team mode is enabled in config
         //this.isTeamMode = Boolean(config.teamMode);
         //console.log(`[JumpClubLevelController] Team Mode: ${this.isTeamMode}`);
+        
+        // Check if config specifies custom speed increase settings
+        if (config && typeof (config as any).speedIncreaseFactor === 'number') {
+            this.speedIncreaseFactor = (config as any).speedIncreaseFactor;
+        }
+        
+        if (config && typeof (config as any).speedIncreaseSeconds === 'number') {
+            this.speedIncreaseSeconds = (config as any).speedIncreaseSeconds;
+        }
+        
+        if (config && typeof (config as any).baseSpeed === 'number') {
+            this.baseSpeed = (config as any).baseSpeed;
+        }
     }
 
    
@@ -111,6 +129,7 @@ export class JumpClubLevelController extends SurvivalLevelController {
         // Add the beams to the course
         console.log(`[JumpClubLevelController] Creating beam course - ${this.difficulty} difficulty`);
         
+		// Upper beam - constant speed
 		this.addRotatingBeam({ x: 1, y: 4, z: 1 }, {
 			beamType: 'large',
 			rotationSpeed: 12,
@@ -118,11 +137,12 @@ export class JumpClubLevelController extends SurvivalLevelController {
 			beamColor: 0x3498db // Blue
 		});
 		
-		this.addRotatingBeam({ x: 1, y: 1.8, z: 1 }, {
+		// Lower beam - will increase in speed
+		this.lowerBeam = this.addRotatingBeam({ x: 1, y: 1.8, z: 1 }, {
 			beamType: 'small',
-			rotationSpeed: 25,
+			rotationSpeed: this.baseSpeed,
 			clockwise: false,
-			beamColor: 0x3498db // Blue
+			beamColor: 0xe74c3c // Red
 		});
 		
         console.log(`[JumpClubLevelController] Created beam course with ${this.beams.length} beams`);
@@ -150,7 +170,7 @@ export class JumpClubLevelController extends SurvivalLevelController {
         
         // Register the beam as an obstacle with the level controller
         this.registerObstacle(beam);
-        console.log(`[JumpClubLevelController] Registered beam obstacle: ${beam.id}`);
+        //console.log(`[JumpClubLevelController] Registered beam obstacle: ${beam.id}`);
         
         return beam;
     }
@@ -159,22 +179,84 @@ export class JumpClubLevelController extends SurvivalLevelController {
      * Reset all beams to their default state
      */
     public override resetObstacles(): void {
-        console.log(`[JumpClubLevelController] Resetting ${this.beams.length} beams`);
+        //console.log(`[JumpClubLevelController] Resetting ${this.beams.length} beams`);
         for (const beam of this.beams) {
             if (beam.isSpawned) {
                 beam.resetState();
             }
         }
+        
+        // Reset the lower beam speed to initial value
+        if (this.lowerBeam && this.lowerBeam.isSpawned) {
+            this.lowerBeam.setRotationSpeed(this.baseSpeed);
+        }
     }
 
     /**
-     * Start the round
+     * Start the round and setup the speed increase interval
      */
     public override startRound(players: Player[], qualificationTarget: number): void {
         console.log(`[JumpClubLevelController] Starting round with ${players.length} players. Target: ${qualificationTarget}`);
         super.startRound(players, qualificationTarget);
 		this.setPausePlayersIds(Array.from(this.startingPlayerIds), true);
         this.resetObstacles();
+        
+        // Start the speed increase interval
+        this.startSpeedIncreaseInterval();
+    }
+    
+    /**
+     * Begin gameplay and activate obstacles
+     */
+    public override beginGameplay(): void {
+        super.beginGameplay();
+        
+        // Make sure speed increase is active when gameplay begins
+        this.startSpeedIncreaseInterval();
+    }
+    
+    /**
+     * Start the interval to periodically increase the lower beam speed
+     */
+    private startSpeedIncreaseInterval(): void {
+        // Clear any existing interval first
+        this.clearSpeedIncreaseInterval();
+        
+        // Setup new interval
+        this.speedIncreaseInterval = setInterval(() => {
+            this.increaseBeamSpeed();
+        }, this.speedIncreaseSeconds * 1000);
+        
+        console.log(`[JumpClubLevelController] Speed increase interval started (every ${this.speedIncreaseSeconds} seconds)`);
+    }
+    
+    /**
+     * Clear the speed increase interval
+     */
+    private clearSpeedIncreaseInterval(): void {
+        if (this.speedIncreaseInterval) {
+            clearInterval(this.speedIncreaseInterval);
+            this.speedIncreaseInterval = null;
+            console.log('[JumpClubLevelController] Speed increase interval cleared');
+        }
+    }
+    
+    /**
+     * Increase the speed of the lower beam
+     */
+    private increaseBeamSpeed(): void {
+        if (!this.lowerBeam || !this.lowerBeam.isSpawned) return;
+        
+        // Get current speed
+        const currentSpeed = this.lowerBeam.getRotationSpeed();
+        
+        // Calculate new speed
+        const newSpeed = currentSpeed * this.speedIncreaseFactor;
+        
+        // Set the new speed
+        this.lowerBeam.setRotationSpeed(newSpeed);
+        
+        console.log(`[JumpClubLevelController] Lower beam speed increased: ${currentSpeed.toFixed(1)} → ${newSpeed.toFixed(1)} degrees/sec`);
     }
 
     /**
@@ -182,6 +264,9 @@ export class JumpClubLevelController extends SurvivalLevelController {
      */
 	public override cleanup(): void {
         console.log(`[JumpClubLevelController] Cleaning up level`);
+        
+        // Clear the speed increase interval
+        this.clearSpeedIncreaseInterval();
         
         // First cleanup local resources
         if (this.beams.length > 0) {
@@ -193,6 +278,9 @@ export class JumpClubLevelController extends SurvivalLevelController {
             });
             this.beams = [];
         }
+        
+        // Reset reference to lower beam
+        this.lowerBeam = null;
         
         // Then call parent class cleanup
         console.log(`[JumpClubLevelController] Calling SurvivalLevelController cleanup`);

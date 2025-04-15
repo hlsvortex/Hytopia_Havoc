@@ -12,12 +12,15 @@ export abstract class CourseLevelController extends LevelController {
     protected finishArea: AreaComponent | null = null;
     protected finishTrigger: TriggerEntity | null = null; // Added
     protected checkpoints: AreaComponent[] = [];
+    protected checkpointTriggers: TriggerEntity[] = []; // Added to track checkpoint triggers
+    protected playerCheckpoints: Map<string, number> = new Map(); // Track highest checkpoint reached per player
     protected boundariesInitialized: boolean = false; // Track if boundaries are set up
     protected timerInterval: NodeJS.Timeout | null = null;
     protected timeRemainingSeconds: number = 180; // Default 3 minutes time limit
     protected roundStartTime: number = 0;
     protected roundTimerEnded: boolean = false;
     protected roundEnded: boolean = false; // Track if round has ended
+    protected showCheckpointMessages: boolean = true; // Control checkpoint messages
     
     constructor(world: World, config: LevelConfiguration, uiBridge: UIBridge | null = null, gameManager: GameManager) {
         super(world, config, uiBridge, gameManager);
@@ -28,6 +31,12 @@ export abstract class CourseLevelController extends LevelController {
         if (config.timeLimitSeconds !== undefined) {
             this.timeRemainingSeconds = config.timeLimitSeconds;
             console.log(`[${this.constructor.name}] Course time limit set to ${this.timeRemainingSeconds} seconds`);
+        }
+        
+        // Check if checkpoint messages should be disabled
+        if (config && (config as any).showCheckpointMessages === false) {
+            this.showCheckpointMessages = false;
+            console.log(`[${this.constructor.name}] Checkpoint messages disabled`);
         }
     }
     
@@ -58,7 +67,7 @@ export abstract class CourseLevelController extends LevelController {
         if (this.finishArea) {
             console.warn(`[${this.constructor.name}] Finish area already set. Overwriting.`);
             // Despawn previous trigger if it exists
-            if (this.finishTrigger && this.finishTrigger.isSpawned) {
+            if (this.finishTrigger ) {
                 this.finishTrigger.despawn();
             }
             this.finishTrigger = null;
@@ -72,10 +81,11 @@ export abstract class CourseLevelController extends LevelController {
             this.finishTrigger = new TriggerEntity(
                 this.finishArea, 
                 this.handlePlayerFinished.bind(this), 
-                `${this.getLevelName()} Finish Line`
+                `${this.getLevelName()} Finish Line`,
+                this.world
             );
 
-            this.finishTrigger.spawn(this.world, this.finishArea.getCenter()); // Spawn the trigger
+            //this.finishTrigger.spawn(this.world, this.finishArea.getCenter()); // Spawn the trigger
         } else {
             console.error(`[${this.constructor.name}] Failed to create finish trigger: Finish area is null.`);
         }
@@ -332,18 +342,76 @@ export abstract class CourseLevelController extends LevelController {
     }
 
     /**
-     * Adds a checkpoint area to the course.
+     * Adds a checkpoint area to the course and creates a trigger entity for it.
      * @param corner1 One corner of the checkpoint area.
      * @param corner2 The opposite corner of the checkpoint area.
      * @param respawnHeight Optional fixed Y-level for respawning within this checkpoint.
+     * @returns The index of the added checkpoint
      */
-    protected addCheckpointArea(corner1: Vector3Like, corner2: Vector3Like, respawnHeight?: number): void {
+    protected addCheckpointArea(corner1: Vector3Like, corner2: Vector3Like, respawnHeight?: number): number {
         const checkpoint = new AreaComponent(corner1, corner2, respawnHeight);
+        const checkpointIndex = this.checkpoints.length;
         this.checkpoints.push(checkpoint);
-        console.log(`[${this.constructor.name}] Checkpoint area ${this.checkpoints.length} added.`);
+        
+        // Create a trigger entity for this checkpoint
+        const checkpointTrigger = new TriggerEntity(
+            checkpoint,
+            (playerEntity) => this.handlePlayerCheckpoint(playerEntity, checkpointIndex),
+            `${this.getLevelName()} Checkpoint ${checkpointIndex + 1}`,
+            this.world
+        );
+        
+        // Store and spawn the trigger
+        this.checkpointTriggers.push(checkpointTrigger);
+        //checkpointTrigger.spawn(this.world, checkpoint.getCenter());
+        
+        console.log(`[${this.constructor.name}] Checkpoint ${checkpointIndex + 1} added and trigger spawned.`);
+        return checkpointIndex;
+    }
+    
+    /**
+     * Handles when a player enters a checkpoint trigger.
+     * @param playerEntity The player entity that entered the checkpoint
+     * @param checkpointIndex The index of the checkpoint (0-based)
+     */
+    protected handlePlayerCheckpoint(playerEntity: PlayerEntity, checkpointIndex: number): void {
+        if (!playerEntity.player) return;
+        
+        const playerId = playerEntity.player.id;
+        const player = playerEntity.player;
+        
+        // Get the player's current highest checkpoint
+        const currentCheckpoint = this.playerCheckpoints.get(playerId) || -1;
+        
+        // Only update if this is a new checkpoint or a higher one
+        if (checkpointIndex > currentCheckpoint) {
+            console.log(`[${this.constructor.name}] Player ${playerId} reached checkpoint ${checkpointIndex + 1}`);
+            
+            // Update the player's checkpoint
+            this.playerCheckpoints.set(playerId, checkpointIndex);
+            
+            // Update the player controller's checkpoint position
+            const checkpointArea = this.checkpoints[checkpointIndex];
+            const respawnPos = checkpointArea.getRandomPosition();
+            
+            const playerController = playerEntity.controller as PlayerController;
+            if (playerController) {
+                playerController.setCheckpoint(respawnPos);
+                console.log(`[${this.constructor.name}] Set checkpoint position for player ${playerId} at checkpoint ${checkpointIndex + 1}`);
+            }
+            
+            // Show checkpoint message to the player if enabled
+            if (this.showCheckpointMessages && this.uiBridge) {
+                this.uiBridge.showAnimatedText(
+                    player, 
+                    `CHECKPOINT ${checkpointIndex + 1}`, 
+                    "", 
+                    1500
+                );
+            }
+        }
     }
 
-   
     /**
      * Checks if a given position is within the finish area.
      * @param position The position to check.
@@ -355,18 +423,19 @@ export abstract class CourseLevelController extends LevelController {
 
     /**
      * Finds the appropriate checkpoint respawn position for a given player position.
-     * Iterates through checkpoints in reverse order (latest checkpoint first).
-     * @param playerPosition The current position of the player.
+     * Uses the tracked checkpoint data instead of checking positions.
+     * @param playerId The player's ID
      * @returns The respawn position of the last checkpoint the player passed, or the start area spawn position if none found.
      */
-    public getCheckpointRespawnPosition(playerPosition: Vector3Like): Vector3Like | null {
-        for (let i = this.checkpoints.length - 1; i >= 0; i--) {
-            // Simple check: Has the player moved past the center Z of the checkpoint?
-            // More robust checks might be needed depending on level layout.
-            if (playerPosition.z > this.checkpoints[i].getCenter().z) {
-                return this.checkpoints[i].getRandomPosition();
-            }
+    public getCheckpointRespawnPosition(playerId: string): Vector3Like | null {
+        // Get the player's highest checkpoint index
+        const checkpointIndex = this.playerCheckpoints.get(playerId);
+        
+        // If player has reached a checkpoint, use that position
+        if (checkpointIndex !== undefined && checkpointIndex >= 0 && checkpointIndex < this.checkpoints.length) {
+            return this.checkpoints[checkpointIndex].getRandomPosition();
         }
+        
         // If no checkpoint passed, return start area spawn
         return this.getStartSpawnPosition(); 
     }
@@ -385,6 +454,9 @@ export abstract class CourseLevelController extends LevelController {
         // Reset round state
         this.roundEnded = false;
         
+        // Reset player checkpoints
+        this.playerCheckpoints.clear();
+        
         this.setPausePlayers(players, true);
         
         // Check if we need to initialize boundaries
@@ -395,8 +467,16 @@ export abstract class CourseLevelController extends LevelController {
             // Check if finish trigger needs respawning (might have been despawned but not nullified)
             if (this.finishTrigger && !this.finishTrigger.isSpawned && this.finishArea) {
                 console.log(`[${this.constructor.name}] Respawning finish trigger`);
-                this.finishTrigger.spawn(this.world, this.finishArea.getCenter());
+                this.finishTrigger.spawn(this.world);
             }
+            
+            // Check if checkpoint triggers need respawning
+            this.checkpointTriggers.forEach((trigger, index) => {
+                if (!trigger.isSpawned && index < this.checkpoints.length) {
+                    console.log(`[${this.constructor.name}] Respawning checkpoint trigger ${index + 1}`);
+                    trigger.spawn(this.world);
+                }
+            });
         }
     }
     
@@ -417,10 +497,24 @@ export abstract class CourseLevelController extends LevelController {
             console.log(`[${this.constructor.name} ${this.config.id}] No finishTrigger found during cleanup.`);
         }
         
+        // Despawn all checkpoint triggers
+        this.checkpointTriggers.forEach((trigger, index) => {
+            if (trigger.isSpawned) {
+                try {
+                    trigger.despawn();
+                    console.log(`[${this.constructor.name}] Despawned checkpoint trigger ${index + 1}`);
+                } catch (e) {
+                    console.error(`[${this.constructor.name}] Error despawning checkpoint trigger ${index + 1}:`, e);
+                }
+            }
+        });
+        
         // Completely null out all area components
         this.finishTrigger = null;
         this.finishArea = null;
         this.checkpoints = [];
+        this.checkpointTriggers = [];
+        this.playerCheckpoints.clear();
         this.qualifiedPlayerIds.clear();
         this.startingPlayerIds.clear(); // Clear starting players
         this.qualificationTarget = 0; 

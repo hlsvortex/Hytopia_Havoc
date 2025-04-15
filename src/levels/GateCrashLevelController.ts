@@ -41,8 +41,8 @@ export class GateCrashLevelController extends CourseLevelController {
         
         
         this.setFinishArea(
-            { x: 8, y: 0, z: 161-100 }, 
-            { x: -8, y: 10, z: 181-100 }
+            { x: 8, y: 0, z: 161 }, 
+            { x: -8, y: 10, z: 181 }
         );
         
         // TODO: Add Checkpoint Areas if needed

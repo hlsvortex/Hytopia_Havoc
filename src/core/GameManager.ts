@@ -1,4 +1,4 @@
-import { World, Player, PlayerEvent, PlayerCameraMode,  Entity, PlayerEntity, ColliderShape, CollisionGroup } from 'hytopia';
+import { World, Player, PlayerEvent, PlayerCameraMode,  Entity, PlayerEntity, ColliderShape, CollisionGroup, Audio } from 'hytopia';
 import { EventEmitter } from '../utils/EventEmitter';
 import { RoundManager } from './RoundManager';
 import { gameConfig } from '../config/gameConfig';
@@ -36,6 +36,10 @@ export class GameManager {
 	
 	public levelManager: LevelManager;
 	
+	private mainMenuMusic: Audio | null = null;
+	private battleMusic: Audio | null = null;
+	private currentMusic: Audio | null = null;
+
 	public events = new EventEmitter<{
 		GameWon: string;
 		GameEnded: string;
@@ -48,6 +52,8 @@ export class GameManager {
 		this.boundHandleBeforeRoundTransition = this.handleBeforeRoundTransition.bind(this);
 		console.log('[GameManager] Initialized in Lobby state.');
 		this.registerHytopiaListeners();
+		this.initializeMusic();
+		this.playSongMainMenuMusic();
 	}
 
 	public setUIBridge(uiBridge: UIBridge): void {
@@ -397,6 +403,7 @@ export class GameManager {
 			return;
 		}
 
+		this.playSongBattleMusic();
 		// Reset UIBridge state at the start of a new round
 		this.uiBridge?.resetState();
 
@@ -910,6 +917,9 @@ export class GameManager {
 			return;
 		}
 		
+		// Store the selected level ID to ensure UI and game logic use the same level
+		const selectedLevelId = data.nextLevelId;
+		
 		// Close HUD and round results UI for all players before showing level select
 		console.log("[GameManager] Closing HUD and round results before showing level select");
 		this.players.forEach(player => {
@@ -934,10 +944,10 @@ export class GameManager {
 		}));
 		
 		// Show Level Select UI to all currently connected players
-		// (RoundManager has already filtered based on qualified players for level selection)
-		console.log("[GameManager] Showing Level Select for next round.");
+		// Include the pre-selected level ID so UI knows what level to show
+		console.log(`[GameManager] Showing Level Select for next round with pre-selected level: ${selectedLevelId}`);
 		this.players.forEach(player => {
-			this.uiBridge?.showLevelSelect(player, levelList);
+			this.uiBridge?.showLevelSelect(player, levelList, selectedLevelId, this.currentRound);
 		});
 		
 		// Set state back to Starting, ready for UI selection
@@ -1252,6 +1262,59 @@ export class GameManager {
 			
 			// Save updated player data
 			await this.savePlayerData(player, playerData);
+		}
+	}
+
+	private initializeMusic(): void {
+		// Create music players
+		this.mainMenuMusic = new Audio({
+			uri: 'audio/music/pixel_beat.mp3',
+			loop: true,
+			volume: 0.3,
+		});
+
+		this.battleMusic = new Audio({
+			uri: 'audio/music/mind_spark.mp3',
+			loop: true,
+			volume: 0.3,
+		});
+
+		// Start main menu music by default
+		this.playSongMainMenuMusic();
+	}
+
+	public playSongMainMenuMusic(): void {
+
+		this.mainMenuMusic?.play(this.world, true);
+		this.battleMusic?.pause();
+		/*
+		this.stopCurrentMusic();
+		this.currentMusic = this.mainMenuMusic;
+		if (this.currentMusic && this.world) {
+			console.log('[GameManager] Playing main menu music');
+			this.currentMusic.play(this.world, true);
+		}
+		*/
+	}
+
+	public playSongBattleMusic(): void {
+
+		this.battleMusic?.play(this.world, true);
+		this.mainMenuMusic?.pause();
+		/*
+		this.stopCurrentMusic();
+		this.currentMusic = this.battleMusic;
+		if (this.currentMusic && this.world) {
+			console.log('[GameManager] Playing battle music');
+			this.currentMusic.play(this.world, true);
+		}
+		*/
+	}
+
+	private stopCurrentMusic(): void {
+		if (this.currentMusic) {
+			this.currentMusic.pause();
+			this.currentMusic = null;
 		}
 	}
 } 

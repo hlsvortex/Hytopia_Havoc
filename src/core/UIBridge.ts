@@ -145,15 +145,27 @@ export class UIBridge {
 
 
     public showMainMenu(player: Player): void {
+		this.gameManager.playSongMainMenuMusic();
+		player.ui.lockPointer(false);
         this.sendDataToPlayer(player, { type: 'SHOW_MAIN_MENU' });
     }
 
-    public showLevelSelect(player: Player, levelList: any[]): void {
-         this.sendDataToPlayer(player, {
+    /**
+     * Shows level selection screen to player
+     * @param player The player to show the level select to
+     * @param levelList List of available levels
+     * @param selectedLevelId Optional level ID to pre-select in the UI
+     * @param currentRound Current round number
+     */
+    public showLevelSelect(player: Player, levelList: any[], selectedLevelId?: string, currentRound?: number): void {
+        this.sendDataToPlayer(player, {
             type: 'LEVEL_SELECT_DATA',
-            levels: levelList
+            levels: levelList,
+            selectedLevelId: selectedLevelId,
+            currentRound: currentRound
         });
         this.sendDataToPlayer(player, { type: 'SHOW_LEVEL_SELECT' });
+		player.ui.lockPointer(true); 
     }
 
     public updatePlayerData(player: Player, playerData: any): void {

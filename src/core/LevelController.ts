@@ -8,9 +8,9 @@ import { UIBridge } from './UIBridge';
 import { AreaComponent } from '../AreaComponent';
 import ObstacleEntity from '../obsticals/ObstacleEntity';
 import PlayerController from '../PlayerController';
-import { GameManager, PlayerData } from './GameManager';
+import { GameManager } from './GameManager';
 import { Team } from '../enums/Team';
-
+import type { PlayerData } from '../types/PlayerData';
 export abstract class LevelController {
 
 	protected gameManager: GameManager;

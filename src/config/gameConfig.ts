@@ -63,7 +63,8 @@ export const gameConfig = {
 			difficulty: 'medium',
 			qualifyCondition: 'PassFinishLine',
 			onPlayerDeath: 'RespawnAtCheckPoint',
-			timeLimitSeconds: 180 // 3 minutes time limit
+			timeLimitSeconds: 180, // 3 minutes time limit
+	//		debugMode: true
 		},
 		{
 			id: 'gatecrash',
@@ -117,7 +118,6 @@ export const gameConfig = {
 			onPlayerDeath: 'Eliminated',
 			timeLimitSeconds: 0,
 			showTimer: false,
-			//debugMode: true
 		},
 		{
 			id: 'topdrop',

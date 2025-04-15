@@ -113,14 +113,19 @@ export default class LevelSelectPanel extends BasePanel {
                     maxRound: l.maxRound || 5,
                     isFinalRound: l.isFinalRound || false
                 }));
+                
+                // Store the pre-selected level ID from the server if provided
+                this.preSelectedLevelId = data.selectedLevelId;
+                console.log(`[UI] Received pre-selected level ID: ${this.preSelectedLevelId}`);
+                
+                if (data.currentRound) {
+                    this.currentRound = data.currentRound;
+                    console.log(`[UI] Current round: ${this.currentRound}`);
+                }
             }
             
             // Show level selection when requested
             if (data.type === 'SHOW_LEVEL_SELECT') {
-                // If a current round is provided, use it
-                if (data.currentRound) {
-                    this.currentRound = data.currentRound;
-                }
                 console.log(`[UI] Level selection for round ${this.currentRound}`);
                 this.openPanel();
                 this.startLevelSelection();
@@ -183,7 +188,22 @@ export default class LevelSelectPanel extends BasePanel {
         // After 3 seconds, stop and transition
         setTimeout(() => {
             clearInterval(this.levelSelectionInterval);
-            this.currentLevelIndex = Math.floor(Math.random() * levelsToUse.length);
+            
+            // If we have a pre-selected level ID, find its index
+            if (this.preSelectedLevelId) {
+                const preSelectedIndex = levelsToUse.findIndex(level => level.id === this.preSelectedLevelId);
+                if (preSelectedIndex !== -1) {
+                    console.log(`[UI] Using pre-selected level: ${this.preSelectedLevelId}`);
+                    this.currentLevelIndex = preSelectedIndex;
+                } else {
+                    console.log(`[UI] Pre-selected level ${this.preSelectedLevelId} not found in eligible levels, using random selection`);
+                    this.currentLevelIndex = Math.floor(Math.random() * levelsToUse.length);
+                }
+            } else {
+                // Otherwise randomize as normal
+                this.currentLevelIndex = Math.floor(Math.random() * levelsToUse.length);
+            }
+            
             const selectedLevel = levelsToUse[this.currentLevelIndex];
             
             // --- Transition to Selected Details State --- 

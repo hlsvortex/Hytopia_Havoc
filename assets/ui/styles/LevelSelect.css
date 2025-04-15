@@ -63,7 +63,7 @@
 }
 
 .level-display {
-    background-color: #191c5000;
+    background-color: #00000000;
     border-radius: 18px;
     padding: 20px;
     width: 80%;
@@ -72,7 +72,7 @@
     flex-direction: column;
     align-items: center;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-    border: 4px solid #00c4ff;
+    border: 4px solid #ffffff;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;

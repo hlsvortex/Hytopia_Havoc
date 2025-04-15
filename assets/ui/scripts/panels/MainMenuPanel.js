@@ -37,6 +37,22 @@ export default class MainMenuPanel extends BasePanel {
                     </div>
                 </div>
 
+                <!-- Player List Section -->
+                <div class="player-list-container">
+                    <div class="player-list-header">
+                        <div class="player-list-title">PLAYER LOBBY</div>
+                    </div>
+                    <div class="player-list">
+                        <!-- Player entries will be added dynamically here -->
+                    </div>
+                    <div class="players-needed-footer">
+                        <div class="player-count">
+                            <i class="fa-solid fa-users"></i>
+                            <span class="player-count-text">0 / 0 PLAYERS</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Character display in center -->
                 <div class="character-display">
                     <!-- Player name above character -->
@@ -91,6 +107,12 @@ export default class MainMenuPanel extends BasePanel {
                 }
             }, 100);
         }
+        
+        // Request current player count and player list
+        hytopia.sendData({
+            type: 'UI_ACTION',
+            action: 'REQUEST_PLAYER_COUNT'
+        });
     }
 
     handlePlayerModelUpdate(modelUri) {
@@ -150,26 +172,55 @@ export default class MainMenuPanel extends BasePanel {
             if (data.type === 'PLAYER_DATA_UPDATE') {
                 this.updatePlayerData(data.playerData);
             }
+            
+            // Update player count display
+            if (data.type === 'PLAYER_COUNT_UPDATE') {
+                this.updatePlayerCount(data.count, data.required);
+            }
+
+            // Update player list display
+            if (data.type === 'PLAYER_LIST_UPDATE') {
+                this.updatePlayerList(data.players);
+            }
         });
     }
 
     handlePlayButtonClick() {
         console.log('Play button clicked - joining game');
         
-        // Send JOIN_GAME action to the server via UIBridge
+        // Check if we have enough players
+        const playerCountText = this.container.querySelector('.player-count-text');
+        if (playerCountText) {
+            // Extract current and required player counts
+            const countMatch = playerCountText.innerText.match(/(\d+)\s*\/\s*(\d+)/);
+            if (countMatch) {
+                const currentCount = parseInt(countMatch[1]);
+                const requiredCount = parseInt(countMatch[2]);
+                
+                if (currentCount < requiredCount) {
+                    console.log(`Not enough players: ${currentCount}/${requiredCount}`);
+                    
+                    // Show message in chat
+					hytopia.sendData({
+						type: 'UI_ACTION',
+						action: 'SHOW_CHAT_MESSAGE',
+						payload: {
+							message: `Not enough players to start! Need ${requiredCount - currentCount} more player...`
+						}
+					});
+                    
+                    // Don't join the game or lock cursor
+                    return;
+                }
+            }
+        }
+        
+        // If we have enough players or couldn't determine, proceed with joining
         hytopia.sendData({
             type: 'UI_ACTION',
             action: 'JOIN_GAME'
         });
         
-        // No need to close panel here, server can decide if needed
-        // this.closePanel();
-        
-        // Disable pointer in UI immediately for better feel
-        hytopia.sendData({
-            type: 'TOGGLE_POINTER_LOCK',
-            enabled: false
-        });
     }
     
     // Calculate XP required for next level
@@ -268,6 +319,57 @@ export default class MainMenuPanel extends BasePanel {
         // Update player model if available
         if (playerData.modelUri) {
             this.handlePlayerModelUpdate(playerData.modelUri);
+        }
+    }
+
+    // Update the player count display
+    updatePlayerCount(count, required) {
+        const playerCountText = this.container.querySelector('.player-count-text');
+        if (playerCountText) {
+            const plural = (count === 1) ? 'PLAYER' : 'PLAYERS';
+            playerCountText.innerHTML = `<span class="count-numbers">${count} / ${required}</span> ${plural}`;
+            
+            // Highlight if not enough players
+            if (count < required) {
+                playerCountText.classList.add('not-enough-players');
+            } else {
+                playerCountText.classList.remove('not-enough-players');
+            }
+        }
+    }
+
+    // Update the player list display
+    updatePlayerList(players) {
+        const playerList = this.container.querySelector('.player-list');
+        if (!playerList) return;
+        
+        // Clear current list
+        playerList.innerHTML = '';
+        
+        // Add player entries
+        if (players && players.length > 0) {
+            players.forEach(player => {
+                const playerEntry = document.createElement('div');
+                playerEntry.className = 'player-entry';
+                
+                const playerName = document.createElement('div');
+                playerName.className = 'player-entry-name';
+                playerName.textContent = player.name;
+                
+                const playerLevel = document.createElement('div');
+                playerLevel.className = 'player-entry-level';
+                playerLevel.innerHTML = `<span class="level-text">LVL</span> <span class="level-number">${player.level}</span>`;
+                
+                playerEntry.appendChild(playerName);
+                playerEntry.appendChild(playerLevel);
+                playerList.appendChild(playerEntry);
+            });
+        } else {
+            // No players message
+            const noPlayers = document.createElement('div');
+            noPlayers.className = 'no-players-message';
+            noPlayers.textContent = 'Waiting for players to join...';
+            playerList.appendChild(noPlayers);
         }
     }
 } 

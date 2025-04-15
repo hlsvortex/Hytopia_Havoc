@@ -21,6 +21,7 @@ export class GameManager {
 	private state: GameState = 'Lobby';
 	private players: Map<string, Player> = new Map();
 	private joinedPlayerData : Map<string, PlayerData> = new Map();
+	private readyPlayerIds: Set<string> = new Set(); // Track players who are ready to play
 
 	//public activePlayerIds: Set<string> = new Set(); // Added
 	public eliminatedPlayerIds: Set<string> = new Set(); // Added
@@ -121,6 +122,10 @@ export class GameManager {
 		if (this.uiBridge) {
 			setTimeout(() => {
 				this.uiBridge?.updatePlayerStats(player, playerData);
+				// Broadcast updated player count to all players
+				this.uiBridge?.broadcastPlayerCount();
+				// Update the player list
+				this.uiBridge?.broadcastPlayerList();
 			}, 1000);
 		}
 
@@ -154,8 +159,16 @@ export class GameManager {
 			playerData.leaveGame();
 		}
 
+		// Remove player from ready set if they were ready
+		this.readyPlayerIds.delete(player.id);
+
 		this.joinedPlayerData.delete(player.id);
 		this.players.delete(player.id);
+
+		// Broadcast updated player count to all players
+		this.uiBridge?.broadcastPlayerCount();
+		// Update the player list
+		this.uiBridge?.broadcastPlayerList();
 
 		if (this.state === 'RoundInProgress' || this.state === 'PostRound') {
 			if (this.players.size < gameConfig.absoluteMinPlayers) {
@@ -172,10 +185,21 @@ export class GameManager {
 		if (this.isGameInProgress()) {
 			this.enterSpectatorMode(player);
 		} else if (this.state === 'Lobby') {
-			// In lobby, player clicked Play. Hide their menu and mark them as ready (conceptually).
+			// In lobby, player clicked Play. Hide their menu and mark them as ready.
 			console.log(`[GameManager] Player ${player.id} ready in lobby. Hiding menu.`); 
 			this.uiBridge?.closeMenu(player); // Tell UIBridge to close the menu
-			// We don't spawn yet - spawning happens in loadAndStartRound
+			
+			// Add player to ready set
+			this.readyPlayerIds.add(player.id);
+			
+			// Check if we have enough players to start the game
+			if (this.players.size >= gameConfig.minPlayersToStart) {
+				console.log(`[GameManager] We have ${this.players.size} players - starting game automatically.`);
+				this.startGame();
+			} else {
+				console.log(`[GameManager] Waiting for more players: have ${this.players.size}, need ${gameConfig.minPlayersToStart}`);
+				this.world.chatManager.sendPlayerMessage(player, `Waiting for more players to join. Need ${gameConfig.minPlayersToStart}, have ${this.players.size}.`);
+			}
 		} else {
 			console.warn(`[GameManager] Player ${player.id} attempted join in unexpected state: ${this.state}`); 
 		}
@@ -306,6 +330,9 @@ export class GameManager {
 		
 		console.log(`[GameManager] Starting game with ${this.players.size} players.`);
 		this.state = 'Starting';
+		
+		// Update the player count display for all players
+		this.uiBridge?.broadcastPlayerCount();
 		
 		const levelList = gameConfig.availableLevels.map(level => ({
 			id: level.id,
@@ -963,6 +990,12 @@ export class GameManager {
 		// Finally set state back to Lobby
 		this.state = 'Lobby';
 		console.log("[GameManager] Game state reset to Lobby, ready for new game");
+		
+		// Update the player count display for all players
+		this.uiBridge?.broadcastPlayerCount();
+
+		// Reset ready players set
+		this.readyPlayerIds.clear();
 	}
 
     /**

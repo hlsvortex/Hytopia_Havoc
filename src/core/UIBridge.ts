@@ -1,5 +1,6 @@
 import { Player, PlayerUIEvent, World } from 'hytopia';
 import { GameManager } from './GameManager'; // Forward declaration
+import { gameConfig } from '../config/gameConfig'; // Correct import path
 
 export class UIBridge {
     private world: World;
@@ -53,6 +54,9 @@ export class UIBridge {
         // Route based on data type
         switch (data.type) {
             case 'UI_ACTION':
+
+				console.log("ACTION ", data.action,data.payload);
+
                 this.handleUIAction(player, data.action, data.payload);
                 break;
             case 'TOGGLE_POINTER_LOCK': // Handle pointer lock requests from UI
@@ -68,11 +72,12 @@ export class UIBridge {
      */
     private handleUIAction(player: Player, action: string, payload: any): void {
         console.log(`[UIBridge] Handling UI Action: ${action} from Player ${player.id}`, payload || '');
+        
         switch (action) {
             case 'JOIN_GAME':
                 this.gameManager.handlePlayerAttemptJoin(player);
                 break;
-            case 'LEVEL_SELECTED': // New Action
+            case 'LEVEL_SELECTED':
                 if (payload && payload.levelId) {
                     // Reset our state when a new level is selected
                     this.resetState();
@@ -81,7 +86,7 @@ export class UIBridge {
                     console.error('[UIBridge] LEVEL_SELECTED action missing levelId payload');
                 }
                 break;
-            case 'ROUND_READY': // Modified Action
+            case 'ROUND_READY':
                 // Only process the first ROUND_READY event
                 if (!this.roundReadyProcessed) {
                     console.log(`[UIBridge] Processing first ROUND_READY from ${player.id}`);
@@ -91,12 +96,34 @@ export class UIBridge {
                     console.log(`[UIBridge] Ignoring duplicate ROUND_READY from ${player.id}`);
                 }
                 break;
-            case 'SUMMARY_CONTINUE': // New Action
+            case 'SUMMARY_CONTINUE':
                 console.log('[UIBridge] SUMMARY_CONTINUE received. Player has finished viewing their summary.');
                 this.gameManager.handleSummaryContinue();
                 break;
-            case 'START_GAME': // Keep for potential future use
+            case 'START_GAME':
                 console.log('[UIBridge] START_GAME action received but not yet implemented via UI.');
+                this.gameManager.startGame();
+                break;
+            case 'REQUEST_PLAYER_COUNT':
+                // Send the current player count to all connected players
+                this.broadcastPlayerCount();
+                // Also send the player list
+                this.broadcastPlayerList();
+                break;
+            case 'REQUEST_PLAYER_LIST':
+                // Send the current player list
+                this.broadcastPlayerList();
+                break;
+            case 'SHOW_CHAT_MESSAGE':
+                // Send a message to the player's chat
+				//console.log(`[UIBridge] Sending chat message to player ${player.id}: ${payload.message}`);
+
+				console.log(`[UIBridge] Showing chat message to player ${player.id}: ${payload}`);
+
+				if (payload && payload.message) {
+
+				    this.world.chatManager.sendPlayerMessage(player, payload.message);
+                }
                 break;
             default:
                 console.warn(`[UIBridge] Unknown UI action: ${action}`);
@@ -254,5 +281,60 @@ export class UIBridge {
                 modelUri: modelUri
             }
         });
+    }
+    
+    /**
+     * Broadcast player count to all players
+     * This should be called whenever a player joins or leaves
+     */
+    public broadcastPlayerCount(): void {
+        const playerCount = this.gameManager.getPlayers().length;
+        const minPlayersRequired = gameConfig.minPlayersToStart;
+        console.log(`[UIBridge] Broadcasting player count: ${playerCount}/${minPlayersRequired}`);
+        
+        this.broadcastData({
+            type: 'PLAYER_COUNT_UPDATE',
+            count: playerCount,
+            required: minPlayersRequired
+        });
+    }
+
+    /**
+     * Broadcast all player data to update the player list
+     */
+    public broadcastPlayerList(): void {
+        const playerDataList = [];
+        const allPlayers = this.gameManager.getPlayers();
+        
+        for (const player of allPlayers) {
+            const playerData = this.gameManager.getPlayerData(player.id);
+            if (playerData) {
+                playerDataList.push({
+                    id: player.id,
+                    name: playerData.playerName || player.id,
+                    level: playerData.playerLevel
+                });
+            }
+        }
+        
+        console.log(`[UIBridge] Broadcasting player list with ${playerDataList.length} players`);
+        this.broadcastData({
+            type: 'PLAYER_LIST_UPDATE',
+            players: playerDataList
+        });
+    }
+
+    /**
+     * Send a chat message to a specific player
+     */
+    public sendChatMessage(player: Player, message: string): void {
+        this.world.chatManager.sendPlayerMessage(player, message);
+    }
+
+    /**
+     * Send a chat message to all players
+     */
+    public broadcastChatMessage(message: string): void {
+        this.world.chatManager.sendBroadcastMessage(message);
     }
 } 

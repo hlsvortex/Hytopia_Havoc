@@ -204,12 +204,13 @@
 /* Season Progress */
 .season-progress-container {
     position: absolute;
+	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
     bottom: 20px;
     left: 20px;
     width: 320px;
     background-color: rgba(0, 0, 0, 0.8);
 	border: 3px solid rgba(255, 255, 255, 0.9);
-    border-radius: 15px;
+	border-radius: 15px;
     padding: 10px 15px;
 }
 
@@ -277,12 +278,12 @@
     background-size: 30px 30px;
     background-image: linear-gradient(
         135deg,
-        rgba(255, 66, 161, 0.85) 25%,
-        transparent 25%,
-        transparent 50%,
-        rgba(255, 66, 161, 0.85) 50%,
-        rgba(255, 66, 161, 0.85) 75%,
-        transparent 75%,
+        rgba(252, 255, 79, 0.85) 20%,
+        transparent 20%,
+        transparent 30%,
+        rgba(252, 255, 79, 0.85) 30%,
+        rgba(252, 255, 79, 0.85) 90%,
+        transparent 90%,
         transparent
     );
     border-radius: 6px;
@@ -328,6 +329,168 @@
     align-items: flex-end;
 }
 
+/* Player Count */
+.player-count {
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 25px;
+    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.3s ease;
+}
+
+.player-count i {
+    color: #2ebffa;
+    font-size: 18px;
+}
+
+.player-count-text {
+    font-size: 16px;
+    letter-spacing: 1px;
+    transition: color 0.3s ease;
+    color: white;
+}
+
+.player-count-text .count-numbers {
+    color: #ffee77;
+    font-weight: bold;
+}
+
+/* Styling for when there aren't enough players */
+.not-enough-players .count-numbers {
+    color: #ff5eae;
+    font-weight: bold;
+    animation: pulsate 1.5s infinite alternate;
+}
+
+.not-enough-players {
+    /* Keep the base text white */
+    color: white;
+}
+
+@keyframes pulsate {
+    from { opacity: 0.8; }
+    to { opacity: 1; }
+}
+
+/* Player List */
+.player-list-container {
+    position: absolute;
+    right: 20px;
+    top: 90px;
+    width: 250px;
+    max-height: 400px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 15px;
+    border: 3px solid rgba(255, 255, 255, 0.9);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+.player-list-header {
+    padding: 10px 15px;
+    background-color: rgba(0, 0, 0, 0.8);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.player-list-title {
+    color: #ff5eae;
+    font-size: 16px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+.player-list {
+    max-height: 350px;
+    overflow-y: auto;
+    padding: 5px;
+}
+
+.player-entry {
+    padding: 6px 10px;
+    border-radius: 6px;
+    margin: 3px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    transition: background-color 0.2s ease;
+}
+
+.player-entry:hover {
+    background-color: rgba(46, 191, 250, 0.3);
+}
+
+.player-entry-name {
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 170px;
+}
+
+.player-entry-level {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.level-text {
+    color: #ffffff;
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.level-number {
+    background: linear-gradient(135deg, #ff5eae 0%, #ff3a8c 100%);
+    color: white;
+    min-width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    font-weight: bold;
+    box-shadow: 0 0 8px rgba(255, 94, 174, 0.5);
+}
+
+.no-players-message {
+    padding: 15px;
+    color: rgba(255, 255, 255, 0.6);
+    text-align: center;
+    font-style: italic;
+}
+
+/* Players needed footer */
+.players-needed-footer {
+    padding: 10px 12px;
+    background-color: rgba(0, 0, 0, 0.8);
+    border-top: 2px solid rgba(255, 255, 255, 0.2);
+    text-align: center;
+    display: flex;
+    justify-content: center;
+}
+
+.players-needed-text {
+    font-size: 14px;
+    font-weight: bold;
+    color: #2ebffa;
+}
+
+/* Show Selector Button */
 .show-selector-button {
     background-color: rgba(46, 191, 250, 0.9);
     border-radius: 10px;
@@ -372,7 +535,7 @@
 }
 
 .play-button {
-    width: 220px;
+    width: 250px;
     height: 80px;
     background: linear-gradient(135deg, #ffbc36 0%, #ff7336 100%);
     border: none;
@@ -415,7 +578,7 @@
 }
 
 .play-mode {
-    font-size: 16px;
+    font-size: 14px;
     color: white;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }

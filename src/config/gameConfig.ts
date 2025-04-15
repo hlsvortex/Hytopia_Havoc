@@ -96,7 +96,7 @@ export const gameConfig = {
 			difficulty: 'medium',
 			qualifyCondition: 'PassFinishLine',
 			onPlayerDeath: 'RespawnAtCheckPoint',
-			debugMode: true
+			//debugMode: true
 		},
 		{
 			id: 'jumpclub',

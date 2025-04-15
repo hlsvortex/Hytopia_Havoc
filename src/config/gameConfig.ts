@@ -99,12 +99,11 @@ export const gameConfig = {
 			qualifyCondition: 'PassFinishLine',
 			onPlayerDeath: 'RespawnAtCheckPoint',
 			timeLimitSeconds: 200, // 2.5 minutes time limit
-			//debugMode: true
 		},
 		{
 			id: 'jumpclub',
 			mapName: 'assets/jump_club.json',
-			displayName: 'Spinning Beam Blitz',
+			displayName: 'Beam Blitz',
 			description: 'Dodge the spinning beams and make it to the finish line!',
 			controller: JumpClubLevelController,
 			levelType: 'Survival',

@@ -335,20 +335,22 @@ export default class MyEntityController extends BaseEntityController {
 				targetVelocities.y = this.jumpVelocity;
 				this.jumpCount++;
 			}
+			/*
 			else if (this.jumpCount == 1) {
 				this.jumpCount++;
-				targetVelocities.y = this.jumpVelocity;
+				//targetVelocities.y = this.jumpVelocity;
 				const facingDirection = Vector3.fromVector3Like(entity.directionFromRotation);
-				targetVelocities.x = facingDirection.x * -5;
-				targetVelocities.z = facingDirection.z * -5;
+				targetVelocities.x = facingDirection.x * -3;
+				targetVelocities.z = facingDirection.z * -3;
 				//entity.rawRigidBody.linearVelocity = { x: targetVelocities.x, y: targetVelocities.y, z: targetVelocities.z };
 				entity.applyImpulse({
 					x: targetVelocities.x * entity.mass,
 					y: 1,
 					z: targetVelocities.z * entity.mass,
 				});
-				//return;
+				return;
 			}
+			*/
 
 			input.sp = false;
 		}

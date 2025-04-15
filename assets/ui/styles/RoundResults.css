@@ -7,8 +7,8 @@
     /* Use the same background as Main Menu and Winner screen */
     background: #23d5ab;
     background-image: 
-        linear-gradient(135deg, rgba(0, 210, 170, 0.6) 0%, rgba(0, 210, 170, 0.6) 100%),
-        repeating-linear-gradient(45deg, #23d5ab 0%, #23d5ab 25%, #00ca9d 25%, #00ca9d 50%, #23d5ab 50%, #23d5ab 75%, #00ca9d 75%, #00ca9d 100%);
+			linear-gradient(135deg, rgba(0, 168, 210, 0.6) 0%, rgba(0, 210, 170, 0.6) 100%),
+			repeating-linear-gradient(45deg, #23d5ab 0%, #23d5ab 25%, #00ca9d 25%, #00ca9d 50%, #23d5ab 50%, #23d5ab 75%, #00ca9d 75%, #00ca9d 100%);
     background-size: cover, 50px 50px;
     display: flex;
     flex-direction: column;

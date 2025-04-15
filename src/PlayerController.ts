@@ -79,14 +79,7 @@ export default class PlayerController extends MyEntityController {
 		console.log('PlayerController handleCollision');
 		const entity = payload.entity as PlayerEntity;
 		if (!entity || !entity.isSpawned) return;
-
-		console.log('PlayerController handleCollision: payload', payload.blockType.name);
-
-		// Check if the collision is with a block
-		if (payload.blockType.name === 'lava') {
-			console.log('PlayerController handleCollision: Lava collision detected');
-			this.handleFall(entity, { x: 0, y: 10, z: 0 });
-		}
+		
 	}
 
 	public setGameManager(gameManager: GameManager): void {

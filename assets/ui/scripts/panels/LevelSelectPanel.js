@@ -82,7 +82,6 @@ export default class LevelSelectPanel extends BasePanel {
 
                 <!-- State 3: Countdown Overlay (Initially Hidden) -->
                 <div class="countdown-container hidden">
-                    <h2><i class="fa-solid fa-clock"></i> STARTING IN</h2>
                     <div class="countdown">3</div>
                 </div>
 

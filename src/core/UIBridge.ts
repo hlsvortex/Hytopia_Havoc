@@ -168,6 +168,41 @@ export class UIBridge {
 		player.ui.lockPointer(true); 
     }
 
+    /**
+     * Broadcasts level selection screen to all players
+     * @param levelList List of available levels
+     * @param selectedLevelId Optional level ID to pre-select in the UI
+     * @param currentRound Current round number
+     */
+    public broadcastLevelSelect(levelList: any[], selectedLevelId?: string, currentRound?: number): void {
+        console.log(`[UIBridge] Broadcasting level select to all players with selectedLevelId: ${selectedLevelId}`);
+        
+        // First close all menus for all players to ensure level select is visible
+        this.gameManager.getPlayers().forEach(player => {
+            // Close the main menu for all players
+            this.closeMenu(player);
+        });
+        
+        // Add a short delay to ensure menus are closed before showing level select
+        setTimeout(() => {
+            // First send level data to all players
+            this.broadcastData({
+                type: 'LEVEL_SELECT_DATA',
+                levels: levelList,
+                selectedLevelId: selectedLevelId,
+                currentRound: currentRound
+            });
+            
+            // Then send the show command
+            this.broadcastData({ type: 'SHOW_LEVEL_SELECT' });
+            
+            // Lock pointers for all players
+            this.gameManager.getPlayers().forEach(player => {
+                player.ui.lockPointer(true);
+            });
+        }, 100); // Short delay to ensure UI transitions properly
+    }
+
     public updatePlayerData(player: Player, playerData: any): void {
         this.sendDataToPlayer(player, { type: 'PLAYER_DATA_UPDATE', playerData });
     }

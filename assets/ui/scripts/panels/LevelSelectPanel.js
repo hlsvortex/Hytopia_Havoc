@@ -188,19 +188,23 @@ export default class LevelSelectPanel extends BasePanel {
         setTimeout(() => {
             clearInterval(this.levelSelectionInterval);
             
-            // If we have a pre-selected level ID, find its index
+            // ALWAYS use the pre-selected level ID from the server if provided
             if (this.preSelectedLevelId) {
                 const preSelectedIndex = levelsToUse.findIndex(level => level.id === this.preSelectedLevelId);
                 if (preSelectedIndex !== -1) {
-                    console.log(`[UI] Using pre-selected level: ${this.preSelectedLevelId}`);
+                    console.log(`[UI] Using server pre-selected level: ${this.preSelectedLevelId}`);
                     this.currentLevelIndex = preSelectedIndex;
                 } else {
-                    console.log(`[UI] Pre-selected level ${this.preSelectedLevelId} not found in eligible levels, using random selection`);
+                    console.error(`[UI] ERROR: Pre-selected level ${this.preSelectedLevelId} not found in eligible levels!`);
+                    // Fallback - we shouldn't normally get here
                     this.currentLevelIndex = Math.floor(Math.random() * levelsToUse.length);
+                    console.log(`[UI] Falling back to random selection: ${levelsToUse[this.currentLevelIndex].id}`);
                 }
             } else {
-                // Otherwise randomize as normal
+                console.warn(`[UI] No pre-selected level ID received from server - this should not happen!`);
+                // Fallback to random selection
                 this.currentLevelIndex = Math.floor(Math.random() * levelsToUse.length);
+                console.log(`[UI] Using random level: ${levelsToUse[this.currentLevelIndex].id}`);
             }
             
             const selectedLevel = levelsToUse[this.currentLevelIndex];
@@ -365,5 +369,21 @@ export default class LevelSelectPanel extends BasePanel {
          if(panelElement) {
             panelElement.classList.remove('state-selected-details', 'state-countdown-active');
          }
+    }
+
+    // Override open/close panel methods
+    openPanel() {
+        // Make sure to hide any other panels that might be open
+        document.querySelectorAll('.panel').forEach(panel => {
+            if (panel !== this.container) {
+                panel.style.display = 'none';
+            }
+        });
+        
+        // Show our panel
+        this.container.style.display = 'flex'; 
+        this.isOpen = true;
+        
+        console.log("[UI] Level select panel opened");
     }
 } 

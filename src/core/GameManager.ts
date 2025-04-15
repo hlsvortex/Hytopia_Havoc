@@ -214,7 +214,19 @@ export class GameManager {
 			// Check if we have enough players to start the game
 			if (this.players.size >= gameConfig.minPlayersToStart) {
 				console.log(`[GameManager] We have ${this.players.size} players - starting game automatically.`);
-				this.startGame();
+				
+				// Close menu for all players to ensure a clean transition to level select
+				this.players.forEach(p => {
+					if (p.id !== player.id) { // Already closed for the current player
+						console.log(`[GameManager] Closing menu for player ${p.id} as game is starting`);
+						this.uiBridge?.closeMenu(p);
+					}
+				});
+				
+				// Add slight delay before starting game to ensure menus are closed
+				setTimeout(() => {
+					this.startGame();
+				}, 200);
 			} else {
 				console.log(`[GameManager] Waiting for more players: have ${this.players.size}, need ${gameConfig.minPlayersToStart}`);
 				this.world.chatManager.sendPlayerMessage(player, `Waiting for more players to join. Need ${gameConfig.minPlayersToStart}, have ${this.players.size}.`);
@@ -375,17 +387,39 @@ export class GameManager {
 			isFinalRound: level.isFinalRound
 		}));
 		
-
+		// Pre-select a level for the first round
+		let selectedLevelId: string | undefined;
+		
 		const debugLevels = levelList.filter(config => Boolean(config.debugMode));
 
 		if (debugLevels.length > 0) {
-			this.players.forEach(player => {
-				this.uiBridge?.showLevelSelect(player, debugLevels);
-			});
+			// In debug mode, always use the first debug level
+			selectedLevelId = debugLevels[0].id;
+			console.log(`[GameManager] Selected debug level for first round: ${selectedLevelId}`);
+			
+			// Broadcast level select to all players at once
+			this.uiBridge?.broadcastLevelSelect(debugLevels, selectedLevelId, 1);
 		} else {
-			this.players.forEach(player => {
-				this.uiBridge?.showLevelSelect(player, levelList);
+			// Filter levels eligible for the first round
+			const eligibleLevels = levelList.filter(level => {
+				const minRound = level.minRound || 1;
+				const maxRound = level.maxRound || gameConfig.maxRounds;
+				return 1 >= minRound && 1 <= maxRound;
 			});
+			
+			if (eligibleLevels.length > 0) {
+				// Randomly select one of the eligible levels
+				const randomIndex = Math.floor(Math.random() * eligibleLevels.length);
+				selectedLevelId = eligibleLevels[randomIndex].id;
+				console.log(`[GameManager] Selected level for first round: ${selectedLevelId}`);
+			} else {
+				// Fallback if no eligible levels
+				selectedLevelId = levelList[0].id;
+				console.log(`[GameManager] No eligible levels for round 1, using fallback: ${selectedLevelId}`);
+			}
+			
+			// Broadcast level select to all players at once
+			this.uiBridge?.broadcastLevelSelect(levelList, selectedLevelId, 1);
 		}
 	}
 
@@ -959,9 +993,8 @@ export class GameManager {
 		// Show Level Select UI to all currently connected players
 		// Include the pre-selected level ID so UI knows what level to show
 		console.log(`[GameManager] Showing Level Select for next round with pre-selected level: ${selectedLevelId}`);
-		this.players.forEach(player => {
-			this.uiBridge?.showLevelSelect(player, levelList, selectedLevelId, this.currentRound);
-		});
+		// Broadcast level select to all players at once
+		this.uiBridge?.broadcastLevelSelect(levelList, selectedLevelId, this.currentRound);
 		
 		// Set state back to Starting, ready for UI selection
 		this.state = 'Starting'; 

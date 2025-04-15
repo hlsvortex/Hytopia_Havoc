@@ -1,7 +1,7 @@
 import { World, Entity, EntityEvent, RigidBodyType, ColliderShape, Vector3, type Vector3Like, type EntityOptions, type EventPayloads, CollisionGroup, PlayerEntity } from 'hytopia';
 import ObstacleEntity from './ObstacleEntity';
 import type { LevelController } from '../core/LevelController';
-
+import { GameSFX } from '../sfx';
 // Define bounce pad sizes
 export type BouncePadSize = 'small' | 'medium' | 'large';
 
@@ -31,7 +31,7 @@ export class BouncePadObstacle extends ObstacleEntity {
 	private targetPosition: Vector3 = new Vector3(0, 0, 0);
 	private movingForward: boolean = true;
 
-	constructor(options: BouncePadObstacleOptions & EntityOptions = {}, levelController: LevelController) {
+	constructor(options: BouncePadObstacleOptions & EntityOptions = {}, levelController: LevelController, world: World) {
 		// Determine pad size and select appropriate model
 		const padSize = options.size || 'medium';
 		let modelPath = '';
@@ -158,7 +158,11 @@ export class BouncePadObstacle extends ObstacleEntity {
 				y: this.bounceForce * mass, // Multiply by mass for proper physics
 				z: 0
 			});
-		}
+			
+			if (this.worldActive) {
+				this.playGameSound(GameSFX.BOUNCE_PAD, this.worldActive);
+			}
+		}	
 	}
 
 	private handleCollision = (payload: EventPayloads[EntityEvent.ENTITY_COLLISION]): void => {

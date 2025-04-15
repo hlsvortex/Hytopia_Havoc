@@ -19,6 +19,10 @@ export abstract class LevelController {
     protected currentMapData: any = null;
     protected uiBridge: UIBridge | null = null;
 
+	public getWorld(): World {
+		return this.world;
+	}
+
 	protected startingPlayerIds: Set<string> = new Set(); // Added to track who started
     protected qualifiedPlayerIds: Set<string> = new Set(); // Added
 	protected eliminatedPlayerIds: Set<string> = new Set();

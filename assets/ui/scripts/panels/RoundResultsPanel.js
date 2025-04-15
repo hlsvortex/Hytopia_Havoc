@@ -11,14 +11,16 @@ export default class RoundResultsPanel extends BasePanel {
         this.container.innerHTML = `
             <div id="round-results-overlay" class="round-results-overlay">
                 <div class="results-header">ROUND COMPLETE!</div>
-                <div class="results-columns">
-                    <div class="results-column qualified-column">
-                        <div class="column-header">QUALIFIED</div>
-                        <ul class="player-list qualified-list"></ul>
-                    </div>
-                    <div class="results-column eliminated-column">
-                        <div class="column-header">ELIMINATED</div>
-                        <ul class="player-list eliminated-list"></ul>
+                <div class="results-container">
+                    <div class="results-columns">
+                        <div class="results-column qualified-column">
+                            <div class="column-header">QUALIFIED</div>
+                            <ul class="player-list qualified-list"></ul>
+                        </div>
+                        <div class="results-column eliminated-column">
+                            <div class="column-header">ELIMINATED</div>
+                            <ul class="player-list eliminated-list"></ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -57,6 +59,11 @@ export default class RoundResultsPanel extends BasePanel {
         // --- End Populate Lists ---
 
         this.openPanel(); // Show the panel
+        
+        // Add animation class
+        setTimeout(() => {
+            this.elements.overlay.classList.add('animate');
+        }, 10);
 
         // --- Animate Elimination Reveal ---
         const eliminatedItems = this.elements.eliminatedList.querySelectorAll('li');
@@ -79,10 +86,18 @@ export default class RoundResultsPanel extends BasePanel {
     }
 
     closePanel() {
-        this.container.style.display = 'none';
-        this.isOpen = false;
-        // Clear lists when closing
-        if(this.elements.qualifiedList) this.elements.qualifiedList.innerHTML = '';
-        if(this.elements.eliminatedList) this.elements.eliminatedList.innerHTML = '';
+        // Remove animation class first for smooth fade out
+        if (this.elements.overlay) {
+            this.elements.overlay.classList.remove('animate');
+        }
+        
+        // Delay hiding to allow for fade out animation
+        setTimeout(() => {
+            this.container.style.display = 'none';
+            this.isOpen = false;
+            // Clear lists when closing
+            if (this.elements.qualifiedList) this.elements.qualifiedList.innerHTML = '';
+            if (this.elements.eliminatedList) this.elements.eliminatedList.innerHTML = '';
+        }, 500);
     }
 } 

@@ -38,7 +38,10 @@ export class GateCrashLevelController extends CourseLevelController {
         
         // Example Finish Area (needs coordinates from the end of the map)
         // Calculate Z based on the last obstacle added
-        
+        this.addCheckpointArea(
+            { x: 13, y: 3, z: 82}, 
+            { x: -11, y: 10, z: 88 }
+        );
         
         this.setFinishArea(
             { x: 8, y: 0, z: 161 }, 

@@ -44,8 +44,8 @@ export class BounceRushLevelController extends CourseLevelController {
 		);
 
 		this.addCheckpointArea(
-			{ x: 14, y: 1, z: 114 },
-			{ x: -14, y: 22, z: 118 }
+			{ x: 14, y: 16, z: 114 },
+			{ x: -14, y: 23, z: 118 }
 		);
 
 		this.setFinishArea(
@@ -127,11 +127,11 @@ export class BounceRushLevelController extends CourseLevelController {
 		spcX = 1;
 
 		this.addBouncePad({ x: this.baseXOffset + 8, y: 13, z: this.baseDepth - spcX + this.padSpacing * depthIndex },
-			'medium', true, "z", 25, 3);
+			'medium', true, "z", 25, 4);
 		this.addBouncePad({ x: this.baseXOffset - 8, y: 13, z: this.baseDepth - spcX + this.padSpacing * depthIndex },
-			'medium', true, "z", 25, 3);
+			'medium', true, "z", 25, 4);
 		this.addBouncePad({ x: this.baseXOffset , y: 13, z: this.baseDepth - spcX + this.padSpacing * depthIndex },
-			'medium', true, "z", 25, -3);
+			'medium', true, "z", 25, -4);
 		
 		depthIndex += 4;
 		spcX = 2;

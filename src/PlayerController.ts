@@ -1,4 +1,4 @@
-import { PlayerEntity, EntityEvent, type PlayerInput, type PlayerCameraOrientation, type Vector3Like, type EventPayloads, Entity, Vector3, Player, PlayerEvent } from 'hytopia';
+import { PlayerEntity, EntityEvent, type PlayerInput, type PlayerCameraOrientation, type Vector3Like, type EventPayloads, Entity, Vector3, Player, PlayerEvent, BlockType } from 'hytopia';
 import MyEntityController from './MyEntityController';
 import { EventEmitter } from "./utils/EventEmitter";
 import { GameManager } from './core/GameManager';
@@ -64,6 +64,7 @@ export default class PlayerController extends MyEntityController {
 
 		// Add fall detection as a TICK event handler
 		entity.on(EntityEvent.TICK, this.checkForFall.bind(this));
+		entity.on(EntityEvent.BLOCK_COLLISION, this.handleCollision.bind(this));
 		console.log('PlayerController attached with fall detection');
 	}
 
@@ -72,6 +73,20 @@ export default class PlayerController extends MyEntityController {
 			throw new Error('Player entity not attached to PlayerController');
 		}
 		return this.playerEntity;
+	}
+
+	public handleCollision(payload: EventPayloads[EntityEvent.BLOCK_COLLISION]): void {
+		console.log('PlayerController handleCollision');
+		const entity = payload.entity as PlayerEntity;
+		if (!entity || !entity.isSpawned) return;
+
+		console.log('PlayerController handleCollision: payload', payload.blockType.name);
+
+		// Check if the collision is with a block
+		if (payload.blockType.name === 'lava') {
+			console.log('PlayerController handleCollision: Lava collision detected');
+			this.handleFall(entity, { x: 0, y: 10, z: 0 });
+		}
 	}
 
 	public setGameManager(gameManager: GameManager): void {

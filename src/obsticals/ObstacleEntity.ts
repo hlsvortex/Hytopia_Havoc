@@ -1,14 +1,16 @@
-import { Entity, type EntityOptions, EntityEvent, type EventPayloads } from 'hytopia';
+import { Entity, type EntityOptions, EntityEvent, type EventPayloads, World, Audio } from 'hytopia';
 import type { LevelController } from '../core/LevelController';
 
 export default class ObstacleEntity extends Entity {
 	protected activated: boolean = false;
 	protected paused: boolean = false;
 	protected levelController: LevelController | null = null;
-
+	protected worldActive: World | null = null;
+	
 	constructor(options: EntityOptions = {}, levelController: LevelController ) {
 		super(options);
 		this.levelController = levelController;
+		this.worldActive = levelController.getWorld();
 		this.levelController?.events.on('RoundGameplayStart', this.onRoundGameplayStart.bind(this));	
 		// Call onPhysicsUpdate every entity tick, ensuring correct 'this'
 		this.on(EntityEvent.TICK, this.onPhysicsUpdate.bind(this));
@@ -37,6 +39,7 @@ export default class ObstacleEntity extends Entity {
 	 */
 	public activate(): void {
 		if (!this.activated) {
+			this.worldActive = this.levelController?.getWorld() ?? null;
 			this.activated = true;
 			//console.log(`[${this.constructor.name} ${this.name || this.id}] Activated`);
 		}
@@ -68,5 +71,26 @@ export default class ObstacleEntity extends Entity {
 	 */
 	public isActivated(): boolean {
 		return this.activated;
+	}
+
+	public playGameSound(soundEffect: { uri: string, volume: number }, world: World) {
+
+		if (world) {
+
+			console.log(`[${this.constructor.name} ${this.name || this.id}] Playing sound: ${soundEffect.uri}`);
+			const playbackRate = Math.random() * 0.2 + 0.8;
+
+			const sound = new Audio({
+				uri: soundEffect.uri,
+				volume: soundEffect.volume,
+				referenceDistance: 2,
+				playbackRate: playbackRate,
+				position: this.position,
+				
+			});
+			//sound.setCutoffDistance(10);
+			sound.setReferenceDistance(2);
+			sound.play(world);
+		}
 	}
 } 

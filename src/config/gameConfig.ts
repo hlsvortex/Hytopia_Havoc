@@ -98,7 +98,8 @@ export const gameConfig = {
 			difficulty: 'medium',
 			qualifyCondition: 'PassFinishLine',
 			onPlayerDeath: 'RespawnAtCheckPoint',
-			timeLimitSeconds: 200 // 2.5 minutes time limit
+			timeLimitSeconds: 200, // 2.5 minutes time limit
+			//debugMode: true
 		},
 		{
 			id: 'jumpclub',

@@ -34,7 +34,7 @@ export class CrashWallObstacle extends ObstacleEntity {
 	private timeAccumulator: number = 0;
 	private isMovementActive: boolean = false;
 
-	constructor(options: CrashWallObstacleOptions & EntityOptions = {}, levelController: LevelController) {
+	constructor(options: CrashWallObstacleOptions & EntityOptions = {}, levelController: LevelController, world: World) {
 		// Determine wall size and select appropriate model
 		const wallSize = options.size || 'medium';
 		let modelPath = '';

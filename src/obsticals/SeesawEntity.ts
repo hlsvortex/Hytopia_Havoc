@@ -1,4 +1,4 @@
-import { type EntityOptions, EntityEvent, type EventPayloads, RigidBodyType, Quaternion, Collider, CoefficientCombineRule } from 'hytopia';
+import { type EntityOptions, EntityEvent, type EventPayloads, RigidBodyType, Quaternion, Collider, CoefficientCombineRule, World } from 'hytopia';
 import ObstacleEntity from './ObstacleEntity';
 import type { LevelController } from '../core/LevelController';
 
@@ -8,7 +8,7 @@ const MAX_ANGLE = 0.65;
 // ----------------------------------------
 
 export default class SeesawEntity extends ObstacleEntity {
-	constructor(options: EntityOptions = {}, levelController: LevelController) {
+	constructor(options: EntityOptions = {}, levelController: LevelController, world: World) {
 
 		const defaultOptions: EntityOptions = {
 			name: 'Seesaw',
@@ -17,7 +17,7 @@ export default class SeesawEntity extends ObstacleEntity {
 			rigidBodyOptions: {
 				type: RigidBodyType.DYNAMIC,
 				additionalSolverIterations: 50,
-				enabledPositions: { x: false, y: false, z: false },
+				enabledPositions: { x: false, y: false, z: false },	
 				enabledRotations: { x: false, y: false, z: true }, // Allow only Z rotation
 				// NOTE: Adding collider back based on modelddddd
 				colliders: [

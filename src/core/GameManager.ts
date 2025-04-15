@@ -845,6 +845,9 @@ export class GameManager {
 					
 					// Wait longer before showing player summaries
 					setTimeout(() => {
+						// Unload level first before showing summary
+						this.cleanupLevel();
+						
 						// Close winner screen
 						this.uiBridge?.broadcastCloseWinner();
 						
@@ -866,7 +869,7 @@ export class GameManager {
 						
 						// After summaries are shown, wait for player to click continue
 						// The actual end game is triggered by handling UI_ACTION with SUMMARY_CONTINUE action
-				this.events.emit('GameWon', winnerId);
+						this.events.emit('GameWon', winnerId);
 					}, 8000); // 8 seconds to show the winner screen
 				}, 3000); // 3 second delay before showing winner screen
 				
@@ -881,6 +884,9 @@ export class GameManager {
 		this.players.forEach(player => {
 			this.uiBridge?.hideHud(player);
 		});
+		
+		// Unload level first before showing summary
+		this.cleanupLevel();
 		
 		// Show player summaries first
 		setTimeout(() => {
@@ -905,9 +911,16 @@ export class GameManager {
 
 	/** Add a handler for SUMMARY_CONTINUE in UIBridge handleUIAction */
 	public handleSummaryContinue(): void {
-		this.endGame('PlayerContinued');
+		// This method is called when a player clicks "Continue" on the summary screen
+		// The level should already be unloaded at this point, just transition to lobby
+		
+		// Switch to main menu music here after level is unloaded
+		this.playSongMainMenuMusic();
+		
+		// Complete remaining cleanup and transition to lobby
+		this.finishGameCleanup('PlayerContinued');
 	}
-
+	
 	private handleBeforeRoundTransition(data: { nextLevelId: string | null, qualifiedPlayers: string[] }): void {
 		console.log(`[GameManager] Received BeforeRoundTransition. Next Level ID: ${data.nextLevelId}`);
 		
@@ -953,45 +966,15 @@ export class GameManager {
 		// Set state back to Starting, ready for UI selection
 		this.state = 'Starting'; 
 	}
-
-	public async endGame(reason: string): Promise<void> {
-		if (this.state === 'GameOver') return;
-		console.log(`[GameManager] Ending game. Reason: ${reason}`);
-		const previousState = this.state;
-		this.state = 'GameOver';
-
-		// Apply rewards to players based on their placement
-		if (reason === 'LastPlayerStanding' || reason === 'MaxRoundsReached' || reason === 'PlayerContinued') {
-			const winnerPlayerId = reason === 'LastPlayerStanding' ? this.roundManager?.getLastPlayerId() || null : null;
-			await this.applyPlayerRewards(winnerPlayerId);
-		}
-
-		// Reset UIBridge state
-		this.uiBridge?.resetState();
-
-		// Unsubscribe from RoundManager events with proper bound methods
-		if (this.roundManager) {
-			try {
-				this.roundManager.events.off('GameEndConditionMet', this.handleGameEndConditionMet.bind(this));
-				this.roundManager.events.off('BeforeRoundTransition', this.boundHandleBeforeRoundTransition);
-				this.roundManager.cleanup();
-			} catch (error) {
-				console.error('[GameManager] Error during RoundManager cleanup:', error);
-			}
-			this.roundManager = null;
-		}
+	
+	/**
+	 * Cleans up the level controller and visual elements
+	 * Called before showing the summary screen
+	 */
+	private cleanupLevel(): void {
+		console.log("[GameManager] Cleaning up level before showing summary");
 		
-		// Reset round counter
-		this.currentRound = 0;
-		
-		// Reset qualification target
-		this.currentQualificationTarget = 0;
-		
-		// Reset eliminated player and spectator sets
-		this.eliminatedPlayerIds.clear();
-		this.spectatorIds.clear();
-		
-		// Unsubscribe GameManager from Level End event before cleaning LevelManager
+		// Unsubscribe from level events
 		const activeLevelController = this.levelManager.getActiveLevelController();
 		if (activeLevelController) {
 			try {
@@ -1001,7 +984,7 @@ export class GameManager {
 			}
 		}
 		
-		// Cleanup LevelManager (cleans active level controller)
+		// Clean up level manager (cleans active level controller)
 		if (this.levelManager) {
 			try {
 				this.levelManager.cleanup();
@@ -1010,9 +993,8 @@ export class GameManager {
 			}
 		}
 		
+		// Despawn all player entities
 		console.log("[GameManager] Despawning all player entities");
-		
-		// Properly clean up all player entities and reset player state
 		this.joinedPlayerData.forEach((playerData, playerId) => {
 			try {
 				// Reset player team
@@ -1034,12 +1016,43 @@ export class GameManager {
 			}
 		});
 		
-		// Emit event and notify players
-		this.events.emit('GameEnded', reason);
-		this.world.chatManager.sendBroadcastMessage(`Game Over! Reason: ${reason}`);
-		console.log("[GameManager] Game Over. Resetting players and state to Lobby.");
+		// Reset all players to spectator camera mode
+		this.players.forEach(player => {
+			player.camera.setMode(PlayerCameraMode.SPECTATOR);
+		});
+	}
+	
+	/**
+	 * Finishes the cleanup process and transitions to lobby
+	 * Called when player clicks "Continue" on summary screen
+	 */
+	private finishGameCleanup(reason: string): void {
+		console.log(`[GameManager] Finishing game cleanup. Reason: ${reason}`);
 		
-		// Clean up UI and reset camera for all players
+		// Reset state variables
+		this.currentRound = 0;
+		this.currentQualificationTarget = 0;
+		this.eliminatedPlayerIds.clear();
+		this.spectatorIds.clear();
+		
+		// Unsubscribe from RoundManager events
+		if (this.roundManager) {
+			try {
+				this.roundManager.events.off('GameEndConditionMet', this.handleGameEndConditionMet.bind(this));
+				this.roundManager.events.off('BeforeRoundTransition', this.boundHandleBeforeRoundTransition);
+				this.roundManager.cleanup();
+			} catch (error) {
+				console.error('[GameManager] Error during RoundManager cleanup:', error);
+			}
+			this.roundManager = null;
+		}
+		
+		// Emit events and notify players
+		this.events.emit('GameEnded', reason);
+		this.world.chatManager.sendBroadcastMessage(`Game Over! Back to lobby.`);
+		console.log("[GameManager] Game Over. Resetting to Lobby state.");
+		
+		// Close all UI elements and show main menu
 		this.players.forEach(player => {
 			try {
 				// Ensure UI elements are closed/hidden
@@ -1047,9 +1060,6 @@ export class GameManager {
 				this.uiBridge?.closeRoundResults(player);
 				this.uiBridge?.closeWinner(player);
 				this.uiBridge?.closePlayerSummary(player);
-
-				// Reset camera to spectator mode
-				player.camera.setMode(PlayerCameraMode.SPECTATOR);
 				
 				// Show main menu with updated stats
 				this.uiBridge?.showMainMenu(player);
@@ -1070,9 +1080,30 @@ export class GameManager {
 		
 		// Update the player count display for all players
 		this.uiBridge?.broadcastPlayerCount();
-
+		
 		// Reset ready players set
 		this.readyPlayerIds.clear();
+	}
+	
+	public async endGame(reason: string): Promise<void> {
+		if (this.state === 'GameOver') return;
+		console.log(`[GameManager] Ending game. Reason: ${reason}`);
+		const previousState = this.state;
+		this.state = 'GameOver';
+
+		// Apply rewards to players based on their placement
+		if (reason === 'LastPlayerStanding' || reason === 'MaxRoundsReached' || reason === 'PlayerContinued') {
+			const winnerPlayerId = reason === 'LastPlayerStanding' ? this.roundManager?.getLastPlayerId() || null : null;
+			await this.applyPlayerRewards(winnerPlayerId);
+		}
+
+		// Reset UIBridge state
+		this.uiBridge?.resetState();
+		
+		// If this is called directly (not through handleSummaryContinue), 
+		// we need to clean up everything
+		this.cleanupLevel();
+		this.finishGameCleanup(reason);
 	}
 
     /**
@@ -1262,6 +1293,23 @@ export class GameManager {
 			
 			// Save updated player data
 			await this.savePlayerData(player, playerData);
+		}
+	}
+
+	private playGameSound(soundEffect: { uri: string, volume: number }, world: World) {
+		if (world) {
+
+			const playbackRate = Math.random() * 0.2 + 0.8;
+
+			const sound = new Audio({
+				uri: soundEffect.uri,
+				volume: soundEffect.volume,
+				referenceDistance: 5,
+				loop: false,
+				playbackRate: playbackRate,
+
+			});
+			sound.play(world);
 		}
 	}
 

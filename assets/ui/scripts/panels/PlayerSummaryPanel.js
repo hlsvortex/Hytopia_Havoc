@@ -9,40 +9,63 @@ export default class PlayerSummaryPanel extends BasePanel {
     init() {
         this.container.innerHTML = `
             <div id="summary-overlay" class="summary-overlay">
-                <div class="summary-header">ROUND SUMMARY</div>
+                <div class="summary-header">YOUR REWARDS</div>
                 <div class="summary-content">
-                    <div class="placement-info">
-                        <div class="placement-rank">
-                            <span id="placement-number">0</span>
-                            <span class="placement-ordinal">th</span>
+                    <!-- Character display on the left -->
+                    <div class="player-display">
+                        <div class="player-model-container">
+                            <i class="fa-solid fa-user-astronaut player-icon"></i>
                         </div>
-                        <div class="placement-text">PLACE</div>
-                    </div>
-                    
-                    <div class="rewards-container">
-                        <div class="reward-item">
-                            <div class="reward-icon coin-icon"></div>
-                            <div class="reward-amount"><span id="coins-earned">0</span> COINS</div>
-                        </div>
-                        <div class="reward-item">
-                            <div class="reward-icon crown-icon"></div>
-                            <div class="reward-amount"><span id="crowns-earned">0</span> CROWN<span id="crown-plural">S</span></div>
+                        <div class="placement-info">
+                            <div class="placement-rank" id="placement-number">0</div>
+                            <div class="placement-ordinal">th</div>
+                            <div class="placement-text">PLACE</div>
                         </div>
                     </div>
                     
-                    <div class="summary-stats">
+                    <!-- Rewards on the right -->
+                    <div class="rewards-section">
+                        <div class="main-rewards-card">
+                            <div class="rewards-title">Victory</div>
+                            <div class="rewards-list">
+                                <div class="reward-item">
+                                    <div class="reward-icon star-icon"><i class="fa-solid fa-star"></i></div>
+                                    <div class="reward-amount">+<span id="coins-earned">35</span></div>
+                                </div>
+                                <div class="reward-item">
+                                    <div class="reward-icon xp-icon"><i class="fa-solid fa-bolt"></i></div>
+                                    <div class="reward-amount">+<span id="xp-earned">3000</span></div>
+                                </div>
+                                <div class="reward-item">
+                                    <div class="reward-icon trophy-icon"><i class="fa-solid fa-trophy"></i></div>
+                                    <div class="reward-amount">+<span id="rounds-played">30</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="crown-card">
+                            <div class="crown-icon"><i class="fa-solid fa-crown"></i></div>
+                            <div class="crown-amount">+<span id="crowns-earned">1</span></div>
+                        </div>
+                        
+                        <button id="continue-button" class="continue-button">Claim</button>
+                    </div>
+                    
+                    <!-- Hidden div that still stores the original data -->
+                    <div class="summary-stats" style="display: none;">
                         <div class="stat-item">
                             <span class="stat-label">Total Players:</span>
                             <span class="stat-value" id="total-players">0</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">Rounds Played:</span>
-                            <span class="stat-value" id="rounds-played">0</span>
+                            <span class="stat-value" id="rounds-played-stat">0</span>
                         </div>
                     </div>
-                    
-                    <button id="continue-button" class="continue-button">CONTINUE</button>
                 </div>
+                
+                <!-- Confetti container (will be filled dynamically) -->
+                <div id="confetti-container"></div>
             </div>
         `;
         this.elements = {
@@ -50,11 +73,13 @@ export default class PlayerSummaryPanel extends BasePanel {
             placementNumber: this.container.querySelector('#placement-number'),
             placementOrdinal: this.container.querySelector('.placement-ordinal'),
             coinsEarned: this.container.querySelector('#coins-earned'),
+            xpEarned: this.container.querySelector('#xp-earned'),
             crownsEarned: this.container.querySelector('#crowns-earned'),
-            crownPlural: this.container.querySelector('#crown-plural'),
-            totalPlayers: this.container.querySelector('#total-players'),
             roundsPlayed: this.container.querySelector('#rounds-played'),
-            continueButton: this.container.querySelector('#continue-button')
+            totalPlayers: this.container.querySelector('#total-players'),
+            roundsPlayedStat: this.container.querySelector('#rounds-played-stat'),
+            continueButton: this.container.querySelector('#continue-button'),
+            confettiContainer: this.container.querySelector('#confetti-container')
         };
         this.addEventListeners();
     }
@@ -90,24 +115,37 @@ export default class PlayerSummaryPanel extends BasePanel {
         
         // Update rewards
         if (this.elements.coinsEarned) {
-            this.elements.coinsEarned.textContent = data.coinsEarned;
+            // Show more coins for higher placement
+            const coinsBase = data.coinsEarned;
+            this.elements.coinsEarned.textContent = coinsBase;
+        }
+        
+        // Calculate XP (better estimation for display)
+        if (this.elements.xpEarned) {
+            const estimatedXP = data.placement === 1 ? 3000 : 
+                               data.placement <= 3 ? 2000 : 
+                               1000 + (11 - data.placement) * 200;
+            this.elements.xpEarned.textContent = estimatedXP;
         }
         
         if (this.elements.crownsEarned) {
             this.elements.crownsEarned.textContent = data.crownsEarned;
-            // Handle plural display
-            if (this.elements.crownPlural) {
-                this.elements.crownPlural.style.display = data.crownsEarned === 1 ? 'none' : 'inline';
-            }
         }
         
-        // Update stats
+        // Update trophy count based on rounds played
+        if (this.elements.roundsPlayed && data.roundsPlayed) {
+            // Add a multiplier to make it look more impressive
+            const trophyScore = data.roundsPlayed * 10;
+            this.elements.roundsPlayed.textContent = trophyScore;
+        }
+        
+        // Update stats (both visible and hidden versions)
         if (this.elements.totalPlayers) {
             this.elements.totalPlayers.textContent = data.totalPlayers;
         }
         
-        if (this.elements.roundsPlayed) {
-            this.elements.roundsPlayed.textContent = data.roundsPlayed;
+        if (this.elements.roundsPlayedStat) {
+            this.elements.roundsPlayedStat.textContent = data.roundsPlayed;
         }
         
         // Open the panel
@@ -116,6 +154,55 @@ export default class PlayerSummaryPanel extends BasePanel {
         // Add animation classes
         if (this.elements.overlay) {
             this.elements.overlay.classList.add('animate');
+        }
+        
+        // Create confetti
+        this.createConfetti();
+    }
+    
+    createConfetti() {
+        if (!this.elements.confettiContainer) return;
+        
+        // Clear any existing confetti
+        this.elements.confettiContainer.innerHTML = '';
+        
+        // Colors for confetti - brighter colors for better visibility
+        const colors = ['#ff4444', '#44ff44', '#4444ff', '#ffff44', '#ff44ff', '#44ffff', '#ff8844', '#ff4488'];
+        
+        // Create 80 confetti elements
+        for (let i = 0; i < 80; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            
+            // Random position
+            const left = Math.random() * 100;
+            
+            // Random size
+            const width = Math.random() * 8 + 4;
+            const height = Math.random() * 12 + 8;
+            
+            // Random rotation
+            const rotation = Math.random() * 360;
+            
+            // Random color
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            // Random animation delay
+            const delay = Math.random() * 3;
+            
+            // Random animation duration
+            const duration = Math.random() * 2 + 3;
+            
+            // Apply styles
+            confetti.style.left = `${left}%`;
+            confetti.style.width = `${width}px`;
+            confetti.style.height = `${height}px`;
+            confetti.style.backgroundColor = color;
+            confetti.style.transform = `rotate(${rotation}deg)`;
+            confetti.style.animationDelay = `${delay}s`;
+            confetti.style.animationDuration = `${duration}s`;
+            
+            this.elements.confettiContainer.appendChild(confetti);
         }
     }
     

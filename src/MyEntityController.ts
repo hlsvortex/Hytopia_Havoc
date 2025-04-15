@@ -339,15 +339,15 @@ export default class MyEntityController extends BaseEntityController {
 				this.jumpCount++;
 				targetVelocities.y = this.jumpVelocity;
 				const facingDirection = Vector3.fromVector3Like(entity.directionFromRotation);
-				targetVelocities.x = facingDirection.x * -15;
-				targetVelocities.z = facingDirection.z * -15;
+				targetVelocities.x = facingDirection.x * -5;
+				targetVelocities.z = facingDirection.z * -5;
 				//entity.rawRigidBody.linearVelocity = { x: targetVelocities.x, y: targetVelocities.y, z: targetVelocities.z };
 				entity.applyImpulse({
 					x: targetVelocities.x * entity.mass,
 					y: 1,
 					z: targetVelocities.z * entity.mass,
 				});
-				return;
+				//return;
 			}
 
 			input.sp = false;
@@ -356,7 +356,7 @@ export default class MyEntityController extends BaseEntityController {
 			this.jumpCount = 0;
 		}
 
-		if (!this.isGrounded) {
+		if (!this.isGrounded && this.jumpCount <= 1) {
 			const mass = entity.mass;
 			this.wantedDeltaVelocities = Vector3.fromVector3Like(this.wantedDeltaVelocities).lerp(Vector3.fromVector3Like(targetVelocities), lerpFactor);
 			this.wantedDeltaVelocities.y = targetVelocities.y;

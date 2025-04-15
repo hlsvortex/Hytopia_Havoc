@@ -157,7 +157,7 @@ export class SeesawLevelController extends CourseLevelController {
 	 * @param position Position to place the seesaw
 	 */
 	public addSeesaw(position: Vector3Like): SeesawEntity {
-		const seesaw = new SeesawEntity({}, this);
+		const seesaw = new SeesawEntity({}, this, this.world);	
 
 
 		seesaw.spawn(this.world, position);

@@ -9,15 +9,15 @@ export default class WinnerPanel extends BasePanel {
     init() {
         this.container.innerHTML = `
             <div id="winner-overlay" class="winner-overlay">
-                <div class="winner-header">WINNER!</div>
                 <div class="winner-content">
-                    <div class="winner-player">
-                        <div class="winner-crown"></div>
-                        <div id="winner-name" class="winner-name">Player</div>
-                    </div>
-                    <div class="winner-message">Congratulations!</div>
-                    <div class="winner-stats">
-                        <div class="stat">Last Player Standing</div>
+                    <div class="winner-banner">
+                        <div class="winner-player">
+                            <div id="winner-name" class="winner-name">Player</div>
+                            <div class="winner-message">HAS WON THE GAME!</div>
+                            <div class="winner-icon-container">
+                                <i class="fa-solid fa-crown"></i>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -41,33 +41,33 @@ export default class WinnerPanel extends BasePanel {
     }
 
     showWinner(winnerName = 'Player') {
+        // First make sure display is set before adding animation class
+        this.container.style.display = 'block';
+        
         // Update winner name
         if (this.elements.winnerName) {
             this.elements.winnerName.textContent = winnerName;
         }
         
-        // Open the panel
-        this.openPanel();
-        
-        // Add animation classes
-        if (this.elements.overlay) {
-            this.elements.overlay.classList.add('animate');
-        }
+        // Use setTimeout to ensure the animation triggers properly
+        setTimeout(() => {
+            if (this.elements.overlay) {
+                this.elements.overlay.classList.add('animate');
+            }
+            this.isOpen = true;
+        }, 10);
     }
     
-    // Override open/close panel methods
-    openPanel() {
-        this.container.style.display = 'flex'; 
-        this.isOpen = true;
-    }
-
     closePanel() {
-        // Remove animation classes
+        // Remove animation class first
         if (this.elements.overlay) {
             this.elements.overlay.classList.remove('animate');
         }
         
-        this.container.style.display = 'none';
-        this.isOpen = false;
+        // Add a small delay to allow the fade animation to complete
+        setTimeout(() => {
+            this.container.style.display = 'none';
+            this.isOpen = false;
+        }, 300);
     }
 } 

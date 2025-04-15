@@ -16,7 +16,6 @@ export default class ObstacleEntity extends Entity {
 	}
 
 	public onRoundGameplayStart(): void {
-		console.log(`[ObstacleEntity ${this.name || this.id}] Round gameplay started`);
 		// Activate the obstacle when gameplay starts if it's not already activated
 		if (!this.activated) {
 			this.activate();
@@ -39,7 +38,7 @@ export default class ObstacleEntity extends Entity {
 	public activate(): void {
 		if (!this.activated) {
 			this.activated = true;
-			console.log(`[${this.constructor.name} ${this.name || this.id}] Activated`);
+			//console.log(`[${this.constructor.name} ${this.name || this.id}] Activated`);
 		}
 	}
 
@@ -49,7 +48,7 @@ export default class ObstacleEntity extends Entity {
 	public deactivate(): void {
 		if (this.activated) {
 			this.activated = false;
-			console.log(`[${this.constructor.name} ${this.name || this.id}] Deactivated`);
+			//console.log(`[${this.constructor.name} ${this.name || this.id}] Deactivated`);
 		}
 	}
 

@@ -8,7 +8,11 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background-color: rgba(46, 55, 142, 0.0);
+    background: #23d5ab;
+    background-image: 
+        linear-gradient(135deg, rgba(0, 210, 170, 0.6) 0%, rgba(0, 210, 170, 0.6) 100%),
+        repeating-linear-gradient(45deg, #23d5ab 0%, #23d5ab 25%, #00ca9d 25%, #00ca9d 50%, #23d5ab 50%, #23d5ab 75%, #00ca9d 75%, #00ca9d 100%);
+    background-size: cover, 50px 50px;
     z-index: 10;
     font-family: 'Arial', sans-serif;
     color: white;
@@ -17,7 +21,7 @@
 }
 
 .level-select-header {
-    background-color: #ff00a6;
+    background-color: #000000;
     padding: 12px 40px;
     border-radius: 18px;
     margin-bottom: 25px;
@@ -59,7 +63,7 @@
 }
 
 .level-display {
-    background-color: #191c50;
+    background-color: #191c5000;
     border-radius: 18px;
     padding: 20px;
     width: 80%;
@@ -96,6 +100,9 @@
     border: 2px solid #ffee00;
     position: relative;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .level-image {
@@ -525,6 +532,10 @@
     border-radius: 15px;
     overflow: hidden;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 300px;
 }
 
 .selected-preview-col .selected-level-image {
@@ -579,6 +590,25 @@
 
 .selected-info-col .selected-level-description i {
     display: none;
+}
+
+.selected-level-description .final-round-tag {
+    display: inline-block;
+    background: linear-gradient(135deg, #ff5eae 0%, #ff3a8c 100%);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-weight: bold;
+    margin-top: 10px;
+    animation: pulse 1.5s infinite alternate;
+    box-shadow: 0 0 10px rgba(255, 94, 174, 0.7);
+}
+
+.selected-level-description .round-info {
+    display: block;
+    margin-top: 15px;
+    font-weight: bold;
+    color: #ffee77;
 }
 
 .medals-container {
@@ -671,5 +701,5 @@
 }
 
 .level-select.state-countdown-active {
-    background-color: transparent;
+    background: transparent !important;
 } 

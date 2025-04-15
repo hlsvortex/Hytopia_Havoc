@@ -221,7 +221,7 @@ export class CrashWallObstacle extends ObstacleEntity {
 
 	public stopMovement(): void {
 		this.isMovementActive = false;
-		console.log(`[CrashWallObstacle ${this.id}] Movement stopped.`);
+		//console.log(`[CrashWallObstacle ${this.id}] Movement stopped.`);
 	}
 
 	/**
@@ -230,7 +230,7 @@ export class CrashWallObstacle extends ObstacleEntity {
 	 */
 	public override activate(): void {
 		super.activate(); // Call parent activate first
-		console.log(`[CrashWallObstacle ${this.id}] Activated - starting movement cycle`);
+		//console.log(`[CrashWallObstacle ${this.id}] Activated - starting movement cycle`);
 		this.isMovementActive = true;
 	}
 	
@@ -240,7 +240,7 @@ export class CrashWallObstacle extends ObstacleEntity {
 	 */
 	public override deactivate(): void {
 		super.deactivate(); // Call parent deactivate first
-		console.log(`[CrashWallObstacle ${this.id}] Deactivated - stopping movement`);
+		//console.log(`[CrashWallObstacle ${this.id}] Deactivated - stopping movement`);
 		this.stopMovement();
 	}
 

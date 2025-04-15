@@ -1,0 +1,29 @@
+.screenshot-seesaw {
+	background-image: url('../ui/images/screen_seesaw.png');
+}
+
+.screenshot-topdrop {
+	background-image: url('../ui/images/screen_topdrop.png');
+}
+
+.screenshot-blockparty {
+	background-image: url('../ui/images/screen_blockparty.png');
+}
+
+.screenshot-jumpclub {
+	background-image: url('../ui/images/screen_jumpclub.png');
+}
+
+.screenshot-gatecrash {
+	background-image: url('../ui/images/screen_gatecrash.png');
+}
+
+.screenshot-rotatingbeam {
+	background-image: url('../ui/images/screen_rotatingbeam.png');
+}
+
+.screenshot-bouncerush {
+	background-image: url('../ui/images/screen_bouncerush.png');
+}
+
+/* Default fallback image */

@@ -22,6 +22,7 @@ export class GameManager {
 	private players: Map<string, Player> = new Map();
 	private joinedPlayerData : Map<string, PlayerData> = new Map();
 	private readyPlayerIds: Set<string> = new Set(); // Track players who are ready to play
+	private spectatorIds: Set<string> = new Set(); // Track players who are in spectator mode
 
 	//public activePlayerIds: Set<string> = new Set(); // Added
 	public eliminatedPlayerIds: Set<string> = new Set(); // Added
@@ -101,51 +102,63 @@ export class GameManager {
 
 	private async handlePlayerJoin(payload: { player: Player }): Promise<void> {
 		const player = payload.player;
-		if (this.players.has(player.id)) return;
-		if (this.joinedPlayerData.has(player.id)) return;
-
-		const playerData = new PlayerData(player);
-		this.joinedPlayerData.set(player.id, playerData);
-			this.players.set(player.id, player);
-
-		// Load persisted player data
-		const persistedData = await this.loadPlayerData(player);
-		playerData.fromJSON(persistedData);
+		console.log(`[GameManager] Player joined world: ${player.id}`);
 		
-		// Display welcome message with player stats
-		console.log(`[GameManager] Player ${player.id} joined with Level ${playerData.playerLevel}, Coins: ${playerData.coins}, Wins: ${playerData.wins}`);
-
-		// Show main menu and update player data display
-		this.uiBridge?.showMainMenu(player);
-
-		// Send player stats to UI for MainMenuPanel to display
-		if (this.uiBridge) {
-			setTimeout(() => {
-				this.uiBridge?.updatePlayerStats(player, playerData);
-				// Broadcast updated player count to all players
-				this.uiBridge?.broadcastPlayerCount();
-				// Update the player list
-				this.uiBridge?.broadcastPlayerList();
-			}, 1000);
+		this.players.set(player.id, player);
+		
+		// Load or create player data
+		const loadedData = await this.loadPlayerData(player);
+		const playerData = new PlayerData(player);
+		playerData.fromJSON(loadedData);
+		this.joinedPlayerData.set(player.id, playerData);
+		
+		// If a game is already in progress, mark player as spectator
+		if (this.isGameInProgress()) {
+			this.spectatorIds.add(player.id);
+			console.log(`[GameManager] Player ${player.id} joined during game in progress. Added to spectators.`);
 		}
 
-		/*
-		if (this.isGameInProgress()) {
-			this.enterSpectatorMode(player);
-		} else {
-			// Show main menu and update player data display
-			this.uiBridge?.showMainMenu(player);
+		// Show UI to the player
+		if (this.uiBridge) {
+			// Set up the main menu with player data
+			this.uiBridge.showMainMenu(player);
 			
-			// Send player stats to UI for MainMenuPanel to display
-			if (this.uiBridge) {
-
-				setTimeout(() => {
-					this.uiBridge?.updatePlayerStats(player, playerData);
+			// Update player stats in the main menu
+			this.uiBridge.updatePlayerStats(player, playerData);
+			
+			// Broadcast updated player count to all players
+			this.uiBridge.broadcastPlayerCount();
+			// Update the player list
+			this.uiBridge.broadcastPlayerList();
+			
+			// Show HUD if the player is joining during an active game
+			if (this.state === 'RoundInProgress') {
+				console.log(`[GameManager] Player ${player.id} joining during active round. Showing HUD.`);
+				this.uiBridge.showHud(player);
 				
-				}, 100);
+				// Get the active level controller to determine HUD type
+				const activeLevelController = this.levelManager.getActiveLevelController();
+				if (activeLevelController) {
+					// Create a basic spectator HUD data since getCurrentHudData doesn't exist
+					const hudData = {
+						goal: "Game in Progress",
+						statusLabel: "SPECTATING",
+						currentCount: 0,
+						totalCount: 0
+					};
+					
+					this.uiBridge.updateHud(player, hudData);
+				}
 			}
 		}
-		*/
+
+		// If game is in progress, set to spectator mode
+		if (this.isGameInProgress()) {
+			this.enterSpectatorMode(player);
+		}
+		
+		// Welcome the player
+		this.world.chatManager.sendPlayerMessage(player, `Welcome to Hytopia! ${player.id}`);
 	}
 
 	private async handlePlayerLeave(payload: { player: Player }): Promise<void> {
@@ -208,6 +221,9 @@ export class GameManager {
 	private enterSpectatorMode(player: Player): void {
 		console.log(`[GameManager] Setting player ${player.id} to spectator mode.`);
 		this.uiBridge?.closeMenu(player);
+		
+		// Add to spectator list
+		this.spectatorIds.add(player.id);
 
 		const existingEntity = this.joinedPlayerData.get(player.id);
 		if (existingEntity && existingEntity.isSpawned()) {
@@ -328,6 +344,10 @@ export class GameManager {
 			return;
 		}
 		
+		// Clear spectator and eliminated lists when starting a new game
+		this.spectatorIds.clear();
+		this.eliminatedPlayerIds.clear();
+		
 		console.log(`[GameManager] Starting game with ${this.players.size} players.`);
 		this.state = 'Starting';
 		
@@ -339,11 +359,14 @@ export class GameManager {
 			name: level.displayName,
 			description: `${level.levelType} round - ${level.difficulty} difficulty`,
 			image: `level_${level.id}.jpg`,
-            // Include other relevant data for UI if needed
-            minPlayers: level.minPlayers,
-            maxPlayers: level.maxPlayers,
-            qualificationSlotsRatio: level.qualificationSlotsRatio,
-			debugMode: level.debugMode
+			// Include other relevant data for UI if needed
+			minPlayers: level.minPlayers,
+			maxPlayers: level.maxPlayers,
+			qualificationSlotsRatio: level.qualificationSlotsRatio,
+			debugMode: level.debugMode,
+			minRound: level.minRound,
+			maxRound: level.maxRound,
+			isFinalRound: level.isFinalRound
 		}));
 		
 
@@ -370,7 +393,7 @@ export class GameManager {
 		console.log(`[GameManager] 1. Preparing round ${this.currentRound} for level: ${levelId}`);
 		
 		if (this.state !== 'Starting' && this.state !== 'PostRound') { 
-			console.warn(`[GameManager] Cannot prepare level in current state: ${this.state}. Aborting.`);
+			console.error(`[GameManager] Cannot prepare level in current state: ${this.state}. Aborting.`);
 			return;
 		}
 
@@ -386,11 +409,32 @@ export class GameManager {
 		}
         console.log(`[GameManager] 3. Level ${levelId} activated successfully.`);
 
+        // Initialize RoundManager first if it doesn't exist (first round)
+        // This needs to happen BEFORE qualification target calculation
+        if (!this.roundManager) {
+            const initialPlayerIds = Array.from(this.players.keys());
+            this.roundManager = new RoundManager(this.world, initialPlayerIds, this.levelManager, this); 
+            // Subscribe to RoundManager events
+            this.roundManager.events.on('GameEndConditionMet', this.handleGameEndConditionMet.bind(this)); 
+            this.roundManager.events.on('BeforeRoundTransition', this.boundHandleBeforeRoundTransition); // Use bound handler
+            console.log('[GameManager] 4. Round Manager initialized and listeners attached.');
+        } else {
+             console.log('[GameManager] 4. Round Manager already exists (likely next round).');
+        }
+
+        // Get active (qualified) player IDs from the RoundManager BEFORE calculating qualification
+        const activePlayerIds = this.roundManager?.getActivePlayerIds() || [];
+        const eliminatedPlayerIds = this.roundManager?.getEliminatedPlayerIds() || [];
+        
+        console.log(`[GameManager] 5. Active players: ${activePlayerIds.length}, Eliminated players: ${eliminatedPlayerIds.length}`);
+
         // --- Calculate Qualification Target --- 
         const config = this.levelManager.getLevelConfigById(levelId);
-        const playerCount = this.players.size;
-        this.currentQualificationTarget = playerCount;
-
+        
+        // Use the activePlayerIds we just got above
+        const activePlayerCount = activePlayerIds.length;
+        
+        // Force recalculation of qualification target
         if (config) {
             // Check if this is a team-based level
             if (config.teamMode) {
@@ -404,7 +448,7 @@ export class GameManager {
             }
             
             // Force a final round configuration when only 2 players remain
-            const onlyTwoPlayersRemain = this.roundManager?.getActivePlayerIds().length === 2;
+            const onlyTwoPlayersRemain = activePlayerCount === 2;
             const isFinalRound = config.isFinalRound || onlyTwoPlayersRemain;
             
             if (isFinalRound) {
@@ -412,32 +456,21 @@ export class GameManager {
                 console.log(`[GameManager] Level ${levelId} is ${onlyTwoPlayersRemain ? 'treating as FINAL round (2 players)' : 'FINAL round'}. Qualification target: ${this.currentQualificationTarget}`);
             } else {
                 const ratio = config.qualificationSlotsRatio ?? 0.6; 
-                this.currentQualificationTarget = Math.max(1, Math.ceil(playerCount * ratio));
-                console.log(`[GameManager] Level ${levelId} uses ratio ${ratio}. Player count: ${playerCount}. Qualification target: ${this.currentQualificationTarget}`);
+                // Safeguard: Ensure we're using at least 1 for player count in calculation
+                const safePlayerCount = Math.max(1, activePlayerCount);
+                
+                // Calculate the qualification target using ceiling to ensure we round up
+                // E.g. 4 players with 0.66 ratio = 2.64, which rounds up to 3
+                const calculatedTarget = Math.ceil(safePlayerCount * ratio);
+                this.currentQualificationTarget = Math.max(1, calculatedTarget);
+                
+                console.log(`[GameManager] Level ${levelId} qualification calculation: ${safePlayerCount} players × ${ratio} ratio = ${safePlayerCount * ratio} raw (${calculatedTarget} after ceiling). Final target: ${this.currentQualificationTarget}`);
             }
         } else {
              console.warn(`[GameManager] Could not find config for level ${levelId} to calculate qualification target. Defaulting to all players.`);
-             this.currentQualificationTarget = playerCount; 
+             this.currentQualificationTarget = Math.max(1, activePlayerCount); 
         }
         // --- End Calculation --- 
-
-        // Initialize RoundManager if it doesn't exist (first round)
-        if (!this.roundManager) {
-		const initialPlayerIds = Array.from(this.players.keys());
-            this.roundManager = new RoundManager(this.world, initialPlayerIds, this.levelManager, this); 
-            // Subscribe to RoundManager events
-            this.roundManager.events.on('GameEndConditionMet', this.handleGameEndConditionMet.bind(this)); 
-            this.roundManager.events.on('BeforeRoundTransition', this.boundHandleBeforeRoundTransition); // Use bound handler
-            console.log('[GameManager] 4. Round Manager initialized and listeners attached.');
-        } else {
-             console.log('[GameManager] 4. Round Manager already exists (likely next round).');
-        }
-
-        // Get active (qualified) player IDs from the RoundManager
-        const activePlayerIds = this.roundManager?.getActivePlayerIds() || [];
-        const eliminatedPlayerIds = this.roundManager?.getEliminatedPlayerIds() || [];
-        
-        console.log(`[GameManager] 5. Active players: ${activePlayerIds.length}, Eliminated players: ${eliminatedPlayerIds.length}`);
 
         // Spawn only active (non-eliminated) players into the new level
         console.log(`[GameManager] 6. Spawning ${activePlayerIds.length} active players for round...`);
@@ -451,8 +484,14 @@ export class GameManager {
         });
 
         
-        // Now spawn only the active players
+        // Now spawn only the active players, except spectators
         activePlayerIds.forEach(playerId => {
+            // Skip players who joined mid-game and are marked as spectators
+            if (this.spectatorIds.has(playerId)) {
+                console.log(`[GameManager] Skipping spawn for spectator ${playerId}`);
+                return;
+            }
+            
             const player = this.players.get(playerId);
             if (player) {
                 this.spawnPlayerInGame(player);
@@ -501,8 +540,22 @@ export class GameManager {
 
 		if (isSurvivalLevel) {
 			// For Survival levels, show elimination count
-			const totalPlayers = this.players.size;
-			const playersToEliminate = totalPlayers - this.currentQualificationTarget;
+			const totalPlayers = this.players.size - this.spectatorIds.size; // Count only active players
+			
+			// IMPORTANT: We need at least 1 player to qualify
+			// If there are only 1-2 players, only eliminate up to half of them
+			let playersToEliminate;
+			if (totalPlayers <= 2) {
+				// For 1-2 players, eliminate at most half (rounded down)
+				playersToEliminate = Math.floor(totalPlayers / 2);
+				console.log(`[GameManager] Small game (${totalPlayers} players) - setting elimination target to ${playersToEliminate}`);
+			} else {
+				// Normal case: eliminate players according to qualification target
+				playersToEliminate = Math.max(0, totalPlayers - this.currentQualificationTarget);
+			}
+			
+			// Make absolutely sure we never try to eliminate all players
+			playersToEliminate = Math.min(playersToEliminate, totalPlayers - 1);
 			
 			initialHudData = {
 				goal: activeLevelConfig?.displayName ?? "Survive!",
@@ -512,7 +565,7 @@ export class GameManager {
 				timer: null // Will be set by the level controller when the timer starts
 			};
 			
-			console.log(`[GameManager] Setting up Survival HUD: Elimination target ${playersToEliminate} of ${totalPlayers} players`);
+			console.log(`[GameManager] Setting up Survival HUD: Elimination target ${playersToEliminate} of ${totalPlayers} players (min 1 will qualify)`);
 		} else {
 			// For other levels (course/race type), show qualification count
 			initialHudData = {
@@ -522,6 +575,8 @@ export class GameManager {
 				totalCount: this.currentQualificationTarget,
 				timer: null
 			};
+			
+			console.log(`[GameManager] Setting up Course HUD: Qualification target ${this.currentQualificationTarget} players can qualify`);
 		}
 
 		this.players.forEach(player => {
@@ -530,8 +585,16 @@ export class GameManager {
 		});
 		// --- End Show & Update HUD ---
 		
+		// Get only active non-spectator players from the round manager
+		const activePlayerIds = this.roundManager?.getActivePlayerIds() || [];
+		const activePlayers = activePlayerIds
+			.map(id => this.players.get(id))
+			.filter(Boolean) as Player[];
+			
+		console.log(`[GameManager] Starting round with ${activePlayers.length} active players and qualification target: ${this.currentQualificationTarget}`);
+		
 		// Start the round logic via LevelManager
-		if (this.levelManager.startRound(this.getPlayers(), this.currentQualificationTarget)) { 
+		if (this.levelManager.startRound(activePlayers, this.currentQualificationTarget)) { 
 			console.log(`[GameManager] 9. Round gameplay started successfully.`);
             
             // Subscribe GameManager and RoundManager to level end event AFTER round starts
@@ -862,9 +925,12 @@ export class GameManager {
 			name: level.displayName,
 			description: `${level.levelType} round - ${level.difficulty} difficulty`,
 			image: `level_${level.id}.jpg`,
-            minPlayers: level.minPlayers,
-            maxPlayers: level.maxPlayers,
-            qualificationSlotsRatio: level.qualificationSlotsRatio
+			minPlayers: level.minPlayers,
+			maxPlayers: level.maxPlayers,
+			qualificationSlotsRatio: level.qualificationSlotsRatio,
+			minRound: level.minRound,
+			maxRound: level.maxRound,
+			isFinalRound: level.isFinalRound
 		}));
 		
 		// Show Level Select UI to all currently connected players
@@ -896,9 +962,9 @@ export class GameManager {
 		// Unsubscribe from RoundManager events with proper bound methods
 		if (this.roundManager) {
 			try {
-			this.roundManager.events.off('GameEndConditionMet', this.handleGameEndConditionMet.bind(this));
+				this.roundManager.events.off('GameEndConditionMet', this.handleGameEndConditionMet.bind(this));
 				this.roundManager.events.off('BeforeRoundTransition', this.boundHandleBeforeRoundTransition);
-			this.roundManager.cleanup();
+				this.roundManager.cleanup();
 			} catch (error) {
 				console.error('[GameManager] Error during RoundManager cleanup:', error);
 			}
@@ -911,8 +977,9 @@ export class GameManager {
 		// Reset qualification target
 		this.currentQualificationTarget = 0;
 		
-		// Reset eliminated player sets
+		// Reset eliminated player and spectator sets
 		this.eliminatedPlayerIds.clear();
+		this.spectatorIds.clear();
 		
 		// Unsubscribe GameManager from Level End event before cleaning LevelManager
 		const activeLevelController = this.levelManager.getActiveLevelController();

@@ -97,6 +97,9 @@ export default class LevelSelectPanel extends BasePanel {
         hytopia.onData(data => {
             console.log('Received data:', data);
             
+            // Track current round from server data
+            this.currentRound = data.currentRound || 1; // Default to round 1 if not specified
+            
             // Check if the data contains level information
             if (data.type === 'LEVEL_SELECT_DATA' && Array.isArray(data.levels)) {
                 console.log(`Received ${data.levels.length} levels from server`);
@@ -105,12 +108,20 @@ export default class LevelSelectPanel extends BasePanel {
                     name: l.name || 'Unknown Level',
                     image: l.image || 'level_default.jpg',
                     description: l.description || 'No description available.',
-                    type: l.type || 'Race' // Default to Race if type missing
+                    type: l.type || 'Race', // Default to Race if type missing
+                    minRound: l.minRound || 1,
+                    maxRound: l.maxRound || 5,
+                    isFinalRound: l.isFinalRound || false
                 }));
             }
             
             // Show level selection when requested
             if (data.type === 'SHOW_LEVEL_SELECT') {
+                // If a current round is provided, use it
+                if (data.currentRound) {
+                    this.currentRound = data.currentRound;
+                }
+                console.log(`[UI] Level selection for round ${this.currentRound}`);
                 this.openPanel();
                 this.startLevelSelection();
             }
@@ -146,19 +157,34 @@ export default class LevelSelectPanel extends BasePanel {
         console.log("[UI] Starting level selection randomization.");
         // --- End Reset --- 
 
+        // Use the current round
+        const currentRound = this.currentRound || 1;
+        console.log(`[UI] Filtering levels for round ${currentRound}`);
+        
+        // Filter levels eligible for the current round based on minRound and maxRound
+        const eligibleLevels = this.levels.filter(level => {
+            const minRound = level.minRound || 1;
+            const maxRound = level.maxRound || 5;
+            return currentRound >= minRound && currentRound <= maxRound;
+        });
+        
+        // If there are no eligible levels, use all levels (failsafe)
+        const levelsToUse = eligibleLevels.length > 0 ? eligibleLevels : this.levels;
+        console.log(`[UI] Found ${eligibleLevels.length} eligible levels for round ${currentRound}`);
+
         this.currentLevelIndex = 0;
         this.updateLevelDisplay(true); // Update the randomizing view
         
         this.levelSelectionInterval = setInterval(() => {
-            this.currentLevelIndex = (this.currentLevelIndex + 1) % this.levels.length;
+            this.currentLevelIndex = (this.currentLevelIndex + 1) % levelsToUse.length;
             this.updateLevelDisplay(true); // Update the randomizing view
         }, 150);
         
         // After 3 seconds, stop and transition
         setTimeout(() => {
             clearInterval(this.levelSelectionInterval);
-            this.currentLevelIndex = Math.floor(Math.random() * this.levels.length);
-            const selectedLevel = this.levels[this.currentLevelIndex];
+            this.currentLevelIndex = Math.floor(Math.random() * levelsToUse.length);
+            const selectedLevel = levelsToUse[this.currentLevelIndex];
             
             // --- Transition to Selected Details State --- 
             if (randomizingDisplay) randomizingDisplay.classList.remove('level-cycling');
@@ -178,11 +204,11 @@ export default class LevelSelectPanel extends BasePanel {
             });
             // --- End Send --- 
 
-            // Show details for 5 seconds, then start countdown
-            console.log("[UI] Displaying selected level info for 5 seconds...");
+            // Show details for 2.5 seconds (reduced from 5 seconds), then start countdown
+            console.log("[UI] Displaying selected level info for 2.5 seconds...");
             setTimeout(() => {
                 this.showCountdown();
-            }, 5000); 
+            }, 2500); 
             
         }, 3000); // Duration of level cycling 
     }
@@ -203,37 +229,53 @@ export default class LevelSelectPanel extends BasePanel {
             const levelImage = this.container.querySelector('.level-display-randomizing .level-image');
             const levelNameText = this.container.querySelector('.level-display-randomizing .name-text');
             const levelDescriptionText = this.container.querySelector('.level-display-randomizing .description-text');
+            const levelImageContainer = this.container.querySelector('.level-display-randomizing .level-image-container');
 
             if (levelNameText) levelNameText.textContent = level.name;
             if (levelDescriptionText) levelDescriptionText.textContent = level.description;
-            if (levelImage) levelImage.src = `${hytopia.cdnAssetsUrl}/ui/images/${level.image}`; 
-            // Add error handling for image if needed
-            // Handle image error more gracefully to avoid console spam if needed
-             if (levelImage) {
-                levelImage.onerror = () => { 
-                    if (this.isOpen) { // Check again inside onerror
-                       levelImage.src = `${hytopia.cdnAssetsUrl}/ui/images/level_default.jpg`; 
-                    }
-                };
-                levelImage.src = `${hytopia.cdnAssetsUrl}/ui/images/${level.image}`;
+            
+            // Use CSS class for background image based on level id
+            if (levelImageContainer && levelImage) {
+                // Remove any existing screenshot classes
+                levelImageContainer.className = 'level-image-container';
+                // Add the specific screenshot class for this level
+                levelImageContainer.classList.add(`screenshot-${level.id}`);
+                
+                // Hide the img element since we're using background-image on the container
+                levelImage.style.display = 'none';
             }
         } else {
              // Update Selected Details View elements
             const headerLevelName = this.container.querySelector('.header-level-name');
+            const selectedImageContainer = this.container.querySelector('.selected-preview-col');
             const selectedImage = this.container.querySelector('.selected-level-image');
             const description = this.container.querySelector('.selected-level-description');
             const typeTag = this.container.querySelector('.level-type-tag');
 
             if (headerLevelName) headerLevelName.textContent = level.name.toUpperCase();
-            if (description) description.textContent = level.description;
+            if (description) {
+                // Create formatted round info with styling
+                let roundInfoHTML = '';
+                
+                if (level.isFinalRound) {
+                    roundInfoHTML = `<span class="final-round-tag">FINAL ROUND</span>`;
+                } else {
+                    roundInfoHTML = `<span class="round-info">Appears in rounds ${level.minRound}-${level.maxRound}</span>`;
+                }
+                
+                description.innerHTML = `${level.description}<br><br>${roundInfoHTML}`;
+            }
             if (typeTag) typeTag.textContent = level.type.toUpperCase();
-            if (selectedImage) {
-                selectedImage.onerror = () => { 
-                    if (this.isOpen) { // Check again inside onerror
-                        selectedImage.src = `${hytopia.cdnAssetsUrl}/ui/images/level_default.jpg`; 
-                    }
-                };
-                selectedImage.src = `${hytopia.cdnAssetsUrl}/ui/images/${level.image}`;
+            
+            // Use CSS class for background image based on level id
+            if (selectedImageContainer && selectedImage) {
+                // Remove any existing screenshot classes
+                selectedImageContainer.className = 'selected-preview-col';
+                // Add the specific screenshot class for this level
+                selectedImageContainer.classList.add(`screenshot-${level.id}`);
+                
+                // Hide the img element since we're using background-image on the container
+                selectedImage.style.display = 'none';
             }
             // TODO: Potentially update medal requirements based on level data if available
         }
@@ -253,7 +295,7 @@ export default class LevelSelectPanel extends BasePanel {
         // --- End Transition --- 
 
         const countdownElement = countdownContainer.querySelector('.countdown');
-        if (countdownElement) countdownElement.textContent = 3; 
+        if (countdownElement) countdownElement.textContent = ''; // Hide initial countdown text
 
         console.log("[UI] Countdown UI shown. Waiting 3 seconds before starting 3-2-1...");
         setTimeout(() => {

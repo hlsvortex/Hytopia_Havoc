@@ -33,7 +33,7 @@ export class GateCrashLevelController extends CourseLevelController {
         this.clearAndSetStartArea(
             { x: 12, y: 2, z: -7 }, 
             { x: -12, y: 2, z: 7 }, 
-            1 // Spawn Height
+            2 // Spawn Height
         );
         
         // Example Finish Area (needs coordinates from the end of the map)
@@ -189,7 +189,7 @@ export class GateCrashLevelController extends CourseLevelController {
    
 
     public startRound(players: Player[], qualificationTarget: number): void {
-        console.log(`[GateCrash] Round started with ${players.length} players. Target: ${qualificationTarget}`);
+        console.log(`[GateCrash] Round started with ${players.length} players. Qualification target: ${qualificationTarget} players will qualify`);
         super.startRound(players, qualificationTarget);
         this.resetObstacles();
         

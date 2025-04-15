@@ -62,7 +62,8 @@ export const gameConfig = {
 			qualificationSlotsRatio: 0.66,
 			difficulty: 'medium',
 			qualifyCondition: 'PassFinishLine',
-			onPlayerDeath: 'RespawnAtCheckPoint'
+			onPlayerDeath: 'RespawnAtCheckPoint',
+			timeLimitSeconds: 180 // 3 minutes time limit
 		},
 		{
 			id: 'gatecrash',
@@ -79,7 +80,7 @@ export const gameConfig = {
 			difficulty: 'medium',
 			qualifyCondition: 'PassFinishLine',
 			onPlayerDeath: 'RespawnAtCheckPoint',
-			//debugMode: true
+			timeLimitSeconds: 180 // 3 minutes time limit
 		},
 		{
 			id: 'bouncerush',
@@ -96,7 +97,7 @@ export const gameConfig = {
 			difficulty: 'medium',
 			qualifyCondition: 'PassFinishLine',
 			onPlayerDeath: 'RespawnAtCheckPoint',
-			//debugMode: true
+			timeLimitSeconds: 200 // 2.5 minutes time limit
 		},
 		{
 			id: 'jumpclub',
@@ -108,13 +109,14 @@ export const gameConfig = {
 			minPlayers: 1,
 			maxPlayers: 10,
 			minRound: 1,
-			maxRound: 4,
-			isFinalRound: true,
+			maxRound: 5,
+			isFinalRound: false,
 			qualificationSlotsRatio: 0.66,
 			difficulty: 'medium',
 			qualifyCondition: 'Survive',
 			onPlayerDeath: 'Eliminated',
 			timeLimitSeconds: 0,
+			showTimer: false,
 			//debugMode: true
 		},
 		{
@@ -127,15 +129,14 @@ export const gameConfig = {
 			minPlayers: 1,
 			maxPlayers: 15,
 			minRound: 1,
-			maxRound: 4,
-			isFinalRound: true,
+			maxRound: 5,
+			isFinalRound: false,
 			qualificationSlotsRatio: 0.66,
 			difficulty: 'medium',
 			qualifyCondition: 'Survive',
 			onPlayerDeath: 'Eliminated',
-			showTimer: false,
-			timeLimitSeconds: 0,
-			//debugMode: true
+			showTimer: true,
+			timeLimitSeconds: 180,
 		},
 		{
 			id: 'blockparty',
@@ -146,8 +147,8 @@ export const gameConfig = {
 			levelType: 'Survival',
 			minPlayers: 1,
 			maxPlayers: 20,
-			minRound: 1,
-			maxRound: 4,
+			minRound: 2,
+			maxRound: 5,
 			isFinalRound: false,
 			qualificationSlotsRatio: 0.5,
 			difficulty: 'hard',

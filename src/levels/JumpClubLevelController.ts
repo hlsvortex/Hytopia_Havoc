@@ -52,11 +52,23 @@ export class JumpClubLevelController extends SurvivalLevelController {
        
 		// Left area
 		this.addStartArea(
-			{ x: -8, y: 2, z: -13 },
-			{ x: -4, y: 2, z: -9 },
+			{ x: -7, y: 2, z: -12 },
+			{ x: -3, y: 2, z: -8 },
 			2 // Spawn Height
 		);
 		
+		this.addStartArea(
+			{ x: 13, y: 2, z: -2 },
+			{ x: 10, y: 2, z: -8 },
+			2 // Spawn Height
+		);
+
+		this.addStartArea(
+			{ x: 14, y: 2, z: 3 },
+			{ x: 10, y: 2, z: 8 },
+			2 // Spawn Height
+		);
+
 		// Center area
 		this.addStartArea(
 			{ x: 9, y: 2, z: -13 },
@@ -108,11 +120,11 @@ export class JumpClubLevelController extends SurvivalLevelController {
 		
 		this.addRotatingBeam({ x: 1, y: 1.8, z: 1 }, {
 			beamType: 'small',
-			rotationSpeed: 30,
+			rotationSpeed: 25,
 			clockwise: false,
 			beamColor: 0x3498db // Blue
 		});
-        
+		
         console.log(`[JumpClubLevelController] Created beam course with ${this.beams.length} beams`);
 	}
 

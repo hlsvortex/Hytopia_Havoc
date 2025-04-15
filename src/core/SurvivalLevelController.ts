@@ -168,7 +168,20 @@ export abstract class SurvivalLevelController extends LevelController {
         
         // Calculate how many players need to be eliminated
         // If we have 4 players and 2 can qualify, we need to eliminate 2 players
-        const playersToEliminate = totalPlayers - this.qualificationTarget;
+        let playersToEliminate;
+
+        // Special handling for 1-2 players (small games)
+        if (totalPlayers <= 2) {
+            // For 1-2 players, eliminate at most half (rounded down)
+            playersToEliminate = Math.floor(totalPlayers / 2);
+            console.log(`[SurvivalLevelController] Small game (${totalPlayers} players) - setting elimination target to ${playersToEliminate}`);
+        } else {
+            // Normal case: eliminate players according to qualification target
+            playersToEliminate = totalPlayers - this.qualificationTarget;
+        }
+        
+        // Make absolutely sure we never try to eliminate all players
+        playersToEliminate = Math.min(playersToEliminate, totalPlayers - 1);
         
         // Format the goal message with time if applicable
         let formattedGoal = this.goalMessage;
@@ -249,25 +262,88 @@ export abstract class SurvivalLevelController extends LevelController {
      * Modified endRoundByTimeout to use tracked timeout
      */
     protected endRoundByTimeout(): void {
-        if (this.roundEnded) return;
+        // If the round is already ended, don't do anything
+        if (this.roundEnded) {
+            console.log(`[${this.constructor.name}] endRoundByTimeout called but round already ended, ignoring`);
+            return;
+        }
         
-        console.log(`[${this.constructor.name}] Round time expired!`);
+        // Immediately mark the round as ended to prevent multiple calls
+        this.roundEnded = true;
+        console.log(`[${this.constructor.name}] Round time expired! Marking round as ended.`);
         
-        // Announce time up to all players
-        if (this.uiBridge) {
-            this.uiBridge.broadcastAnimatedText("TIME", "UP!", 2000);
+        // Clear the timer immediately to prevent any further ticks
+        if (this.timerInterval) {
+            console.log(`[${this.constructor.name}] Clearing timer interval`);
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
         }
         
         // Clear any existing round end timeout
         if (this.roundEndTimeout) {
+            console.log(`[${this.constructor.name}] Clearing existing round end timeout`);
             clearTimeout(this.roundEndTimeout);
+            this.roundEndTimeout = null;
         }
         
-        // End the round after a short delay with tracked timeout
-        this.roundEndTimeout = this.safeSetTimeout(() => {
-            this.endRound();
-            this.roundEndTimeout = null;
+        // Show TIME UP! message to all players
+        if (this.uiBridge) {
+            console.log(`[${this.constructor.name}] Showing TIME UP! message`);
+            this.uiBridge.broadcastAnimatedText("TIME", "UP!", 2000);
+        }
+        
+        // Determine qualified players (all players who weren't eliminated)
+        const qualified = Array.from(this.startingPlayerIds)
+            .filter(id => !this.eliminatedPlayerIds.has(id));
+        const eliminated = Array.from(this.eliminatedPlayerIds);
+        
+        // Store qualified players
+        this.qualifiedPlayerIds = new Set(qualified);
+        
+        console.log(`[${this.constructor.name}] Time expired - Qualified: ${qualified.length}, Eliminated: ${eliminated.length}`);
+        
+        // Use a stronger timeout approach with direct event emission
+        setTimeout(() => {
+            // Safety check - if somehow the round ended through another path during our timeout
+            if (!this.roundEnded) {
+                console.log(`[${this.constructor.name}] Round no longer marked as ended during timeout, aborting endRoundByTimeout`);
+                return;
+            }
+
+            console.log(`[${this.constructor.name}] Time's up timeout completed, emitting RoundEnd event directly`);
+            
+            // Emit the RoundEnd event directly with our qualified/eliminated players
+            this.events.emit('RoundEnd', { q: qualified, e: eliminated });
+            
+            // Additional cleanup to ensure we're fully done with this level
+            this.cleanupRound();
+            
         }, 2000);
+    }
+    
+    /**
+     * Additional cleanup method to ensure all timers and handlers are properly cleared
+     * Called by both endRound and endRoundByTimeout
+     */
+    protected cleanupRound(): void {
+        // Clear timers
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
+        
+        if (this.roundEndTimeout) {
+            clearTimeout(this.roundEndTimeout);
+            this.roundEndTimeout = null;
+        }
+        
+        // Clear tick handler
+        if (this.tickListener) {
+            this.world.off(EntityEvent.TICK, this.tickListener);
+            this.tickListener = null;
+        }
+        
+        console.log(`[${this.constructor.name}] Round cleanup completed`);
     }
     
     /**
@@ -288,21 +364,15 @@ export abstract class SurvivalLevelController extends LevelController {
         console.log(`[SurvivalLevelController] Starting round with ${players.length} players. Target: ${qualificationTarget}`);
         
         // Store round parameters
-        this.qualificationTarget = qualificationTarget;
+        this.qualificationTarget = Math.max(1, qualificationTarget); // Ensure at least 1 player qualifies
         this.startingPlayerIds = new Set(players.map(p => p.id));
         this.qualifiedPlayerIds.clear();
         this.eliminatedPlayerIds.clear();
         this.roundEnded = false;
         
 		this.setPausePlayersIds(Array.from(this.startingPlayerIds), true);
-		/*// Store reference to players for later use
-        this.players.clear();
-        this.playerEntities.clear();
         
-        players.forEach(player => {
-            this.players.set(player.id, player);
-        });*/
-        
+		
         // Set up handlers
         this.setupTickHandler();
         
@@ -318,28 +388,16 @@ export abstract class SurvivalLevelController extends LevelController {
      * End the current round with improved cleanup
      */
     public override endRound(): void {
-        if (this.roundEnded) return;
+        // Check if round already ended to prevent double calls
+        if (this.roundEnded) {
+            console.log(`[${this.constructor.name}] endRound called but round already ended, ignoring`);
+            return;
+        }
         
         this.roundEnded = true;
-        console.log(`[${this.constructor.name}] Ending round`);
         
-        // Clear timers
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
-        }
-        
-        // Clear round end timeout if it exists
-        if (this.roundEndTimeout) {
-            clearTimeout(this.roundEndTimeout);
-            this.roundEndTimeout = null;
-        }
-        
-        // Clean up tick handler
-        if (this.tickListener) {
-            this.world.off(EntityEvent.TICK, this.tickListener);
-            this.tickListener = null;
-        }
+        // Call our cleanup method to ensure all timers are cleared
+        this.cleanupRound();
         
         // Determine qualified and eliminated players
         const qualified = Array.from(this.startingPlayerIds)

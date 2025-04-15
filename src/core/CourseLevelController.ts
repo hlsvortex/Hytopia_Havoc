@@ -13,11 +13,22 @@ export abstract class CourseLevelController extends LevelController {
     protected finishTrigger: TriggerEntity | null = null; // Added
     protected checkpoints: AreaComponent[] = [];
     protected boundariesInitialized: boolean = false; // Track if boundaries are set up
+    protected timerInterval: NodeJS.Timeout | null = null;
+    protected timeRemainingSeconds: number = 180; // Default 3 minutes time limit
+    protected roundStartTime: number = 0;
+    protected roundTimerEnded: boolean = false;
+    protected roundEnded: boolean = false; // Track if round has ended
     
     constructor(world: World, config: LevelConfiguration, uiBridge: UIBridge | null = null, gameManager: GameManager) {
         super(world, config, uiBridge, gameManager);
         // Don't call setupCourseBoundaries here - will be called in startRound when needed
         console.log(`[${this.constructor.name}] Constructor called for ${config.id}`);
+        
+        // Set time limit from config if provided
+        if (config.timeLimitSeconds !== undefined) {
+            this.timeRemainingSeconds = config.timeLimitSeconds;
+            console.log(`[${this.constructor.name}] Course time limit set to ${this.timeRemainingSeconds} seconds`);
+        }
     }
     
     /**
@@ -151,36 +162,162 @@ export abstract class CourseLevelController extends LevelController {
 		// Emit gameplay start event
 		this.events.emit('RoundGameplayStart', null);
 
-		// Start the round timer (now only started here, not in startRound)
+		// Start the round timer
 		console.log(`[${this.constructor.name}] Starting round timer`);
+		this.startRoundTimer();
 	}
+
+    /**
+     * Start the course timer
+     */
+    protected startRoundTimer(): void {
+        if (this.timeRemainingSeconds <= 0) {
+            console.log(`[${this.constructor.name}] No time limit provided, timer not started`);
+            return;
+        }
+
+        // Clear any existing timer
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
+
+        this.roundStartTime = Date.now();
+        this.roundTimerEnded = false;
+        console.log(`[${this.constructor.name}] Timer started with ${this.timeRemainingSeconds} seconds`);
+
+        // Set up timer interval
+        this.timerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - this.roundStartTime) / 1000);
+            const remaining = Math.max(0, this.timeRemainingSeconds - elapsed);
+            
+            // Update HUD if we're in the last 10 seconds or if timer ended
+            if (remaining <= 10 || remaining === 0) {
+                this.broadcastHudUpdate(remaining);
+            }
+            
+            // Show countdown announcements in the final seconds
+            if (remaining <= 5 && remaining > 0 && this.uiBridge) {
+                this.uiBridge.broadcastAnimatedText(remaining.toString(), "", 900);
+            }
+            
+            // If time is up, eliminate all unqualified players
+            if (remaining === 0 && !this.roundTimerEnded) {
+                this.handleTimeUp();
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+            }
+        }, 1000);
+    }
+    
+    /**
+     * Handle time up - eliminate all remaining players
+     */
+    protected handleTimeUp(): void {
+        if (this.roundTimerEnded) return;
+        
+        console.log(`[${this.constructor.name}] Course time limit reached!`);
+        this.roundTimerEnded = true;
+        
+        // Show TIME UP! message to all players
+        if (this.uiBridge) {
+            this.uiBridge.broadcastAnimatedText("TIME", "UP!", 2000);
+        }
+        
+        // Get all players who haven't qualified yet
+        const remainingPlayers = Array.from(this.startingPlayerIds)
+            .filter(id => !this.qualifiedPlayerIds.has(id));
+            
+        // No need to continue if everyone qualified
+        if (remainingPlayers.length === 0) {
+            console.log(`[${this.constructor.name}] All players already qualified, ending round`);
+            this.endRound();
+            return;
+        }
+        
+        // Eliminate all remaining players
+        console.log(`[${this.constructor.name}] Eliminating ${remainingPlayers.length} players who didn't finish in time`);
+        
+        // Put remaining players in spectator mode
+        remainingPlayers.forEach(playerId => {
+            const player = this.gameManager?.getPlayerById(playerId);
+            if (player) {
+                const playerEntity = this.gameManager?.getPlayerEntity(playerId);
+                if (playerEntity && playerEntity.player) {
+                    // Show ELIMINATED message
+                    if (this.uiBridge) {
+                        this.uiBridge.showAnimatedText(playerEntity.player, "ELIMINATED!", "", 2000);
+                    }
+                    
+                    // Set to spectator and despawn
+                    playerEntity.player.camera.setMode(PlayerCameraMode.SPECTATOR);
+                    if (playerEntity.isSpawned) {
+                        setTimeout(() => {
+                            if (playerEntity.isSpawned) {
+                                playerEntity.despawn();
+                            }
+                        }, 50);
+                    }
+                }
+            }
+        });
+        
+        // End the round after a short delay
+        setTimeout(() => {
+            if (!this.roundEnded) {
+                this.endRound();
+            }
+        }, 2000);
+    }
 
     /**
      * Broadcasts the current HUD state to all players.
      */
-    protected broadcastHudUpdate(): void {
+    protected broadcastHudUpdate(timeRemaining?: number): void {
         if (!this.uiBridge) return;
         
-        // TODO: Get goal text dynamically if needed (or assume it's set initially)
+        // Only include timer if in last 10 seconds or explicitly provided
+        const showTimer = timeRemaining !== undefined || 
+            (this.timeRemainingSeconds > 0 && 
+             Math.floor((Date.now() - this.roundStartTime) / 1000) >= this.timeRemainingSeconds - 10);
+        
+        const currentTimeRemaining = timeRemaining !== undefined ? 
+            timeRemaining : 
+            Math.max(0, this.timeRemainingSeconds - Math.floor((Date.now() - this.roundStartTime) / 1000));
+        
         const hudData = {
-            // goal: this.config.displayName ?? "Survive!", 
+            goal: "Race to the finish!",
             statusLabel: "QUALIFIED",
             currentCount: this.qualifiedPlayerIds.size,
             totalCount: this.qualificationTarget,
-            timer: null // TODO: Add timer logic if applicable
+            // Only show timer in last 10 seconds
+            timer: showTimer ? currentTimeRemaining : undefined
         };
         
-        // Need a way to get all players - maybe from GameManager via LevelManager?
-        // For now, assume uiBridge has a broadcast method (we need to add it)
         this.uiBridge.broadcastData({ type: 'UPDATE_HUD', hudData }); 
-        console.log(`[${this.constructor.name}] Broadcasting HUD Update: ${hudData.currentCount}/${hudData.totalCount}`);
+        console.log(`[${this.constructor.name}] Broadcasting HUD Update: ${hudData.currentCount}/${hudData.totalCount} ${showTimer ? `Time: ${currentTimeRemaining}s` : ''}`);
     }
     
     /**
      * Ends the current round, emitting results.
      */
-    public endRound(): void {
+    public override endRound(): void {
+        if (this.roundEnded) {
+            console.log(`[${this.constructor.name}] endRound called but round already ended`);
+            return;
+        }
+        
         console.log(`[${this.constructor.name}] *** endRound() CALLED ***. Qualified: ${this.qualifiedPlayerIds.size}, Target: ${this.qualificationTarget}, Started: ${this.startingPlayerIds.size}`);
+        
+        this.roundEnded = true;
+        
+        // Clear the timer
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
 
         // Calculate eliminated players
         const eliminatedIds = Array.from(this.startingPlayerIds)
@@ -240,12 +377,15 @@ export abstract class CourseLevelController extends LevelController {
      * @param qualificationTarget Number of players needed to qualify.
      */
     public startRound(players: Player[], qualificationTarget: number): void {
+        console.log(`[CourseLevelController] Starting round with ${players.length} players. Target: ${qualificationTarget}`);
         this.qualificationTarget = qualificationTarget;
         this.qualifiedPlayerIds.clear(); 
         // Store starting player IDs
         this.startingPlayerIds = new Set(players.map(p => p.id)); 
-
-		this.setPausePlayers(players, true);
+        // Reset round state
+        this.roundEnded = false;
+        
+        this.setPausePlayers(players, true);
         
         // Check if we need to initialize boundaries
         if (!this.boundariesInitialized) {
@@ -291,5 +431,11 @@ export abstract class CourseLevelController extends LevelController {
         super.cleanup(); // Call base cleanup (LevelController)
         
         console.log(`[${this.constructor.name}] Course level cleanup complete`);
+        
+        // Clear timer interval
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
     }
 } 

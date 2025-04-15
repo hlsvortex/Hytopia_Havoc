@@ -93,6 +93,8 @@ export default class MyEntityController extends BaseEntityController {
 	/** @internal */
 	private _platform: Entity | undefined;
 
+	private initialCameraYaw: number | undefined;
+
 	/**
 	 * @param options - Options for the controller.
 	 */
@@ -148,6 +150,27 @@ export default class MyEntityController extends BaseEntityController {
 		this.resetInput = true;
 
 		entity.setGravityScale(1.1);
+		
+		// Set initial rotation to face 180 degrees (opposite direction)
+		entity.setRotation({
+			x: 0,
+			y: Math.fround(Math.sin(Math.PI / 2)), // 180 degrees = PI radians, half-angle is PI/2
+			z: 0,
+			w: Math.fround(Math.cos(Math.PI / 2))
+		});
+
+		// For PlayerEntity, also set the initial camera orientation
+		if (entity instanceof PlayerEntity) {
+			// Access the player to set camera orientation
+			const player = entity.player;
+			if (player) {
+				// Force an initial camera yaw to match the entity rotation (180 degrees)
+				player.camera.setMode(player.camera.mode); // Reapply the current mode to refresh
+				
+				// We need to force the controller to use this initial orientation on first tick
+				this.initialCameraYaw = Math.PI; // 180 degrees in radians
+			}
+		}
 
 		// Ground sensor
 		entity.createAndAddChildCollider({
@@ -216,6 +239,13 @@ export default class MyEntityController extends BaseEntityController {
 		if (!entity.isSpawned || !entity.world) return;
 
 		const { w, a, s, d, sp, sh, ml } = input;
+
+		// Apply initial camera orientation if needed
+		if (this.initialCameraYaw !== undefined && this.resetInput) {
+			// Override the camera orientation to start at our defined rotation
+			cameraOrientation.yaw = this.initialCameraYaw;
+			this.initialCameraYaw = undefined; // Only apply once
+		}
 
 		if (this.resetInput) {
 			input = { w: false, a: false, s: false, d: false, sp: false, sh: false, ml: false };
@@ -309,8 +339,8 @@ export default class MyEntityController extends BaseEntityController {
 				this.jumpCount++;
 				targetVelocities.y = this.jumpVelocity;
 				const facingDirection = Vector3.fromVector3Like(entity.directionFromRotation);
-				targetVelocities.x = facingDirection.x * -5;
-				targetVelocities.z = facingDirection.z * -5;
+				targetVelocities.x = facingDirection.x * -15;
+				targetVelocities.z = facingDirection.z * -15;
 				//entity.rawRigidBody.linearVelocity = { x: targetVelocities.x, y: targetVelocities.y, z: targetVelocities.z };
 				entity.applyImpulse({
 					x: targetVelocities.x * entity.mass,

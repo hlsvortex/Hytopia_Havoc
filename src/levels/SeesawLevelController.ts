@@ -164,7 +164,7 @@ export class SeesawLevelController extends CourseLevelController {
 	}
 
 	public startRound(players: Player[], qualificationTarget: number): void {
-		console.log(`[SeesawLevelController] Starting round with ${players.length} players. Target: ${qualificationTarget}`);
+		console.log(`[SeesawLevelController] Starting round with ${players.length} players. Qualification target: ${qualificationTarget} players will qualify`);
 		super.startRound(players, qualificationTarget);
 		this.resetSeesaws();
 	}

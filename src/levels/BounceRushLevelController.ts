@@ -44,8 +44,8 @@ export class BounceRushLevelController extends CourseLevelController {
 		);
 
 		this.setFinishArea(
-			{ x: 13, y: 19, z: 222 },
-			{ x: -13, y: 22, z: 236 }
+			{ x: 13, y: 1, z: 222-150 },
+			{ x: -13, y: 22, z: 236-150 }
 		);
 	}
 

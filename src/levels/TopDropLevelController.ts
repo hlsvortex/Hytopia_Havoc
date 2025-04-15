@@ -125,7 +125,7 @@ export class TopDropLevelController extends SurvivalLevelController {
                 // Remove the block
                 try {
                     this.world.chunkLattice.setBlock({ x, y, z }, 0);
-                    this.logger.log(`Removed block at ${x}, ${y}, ${z}`);
+                   // this.logger.log(`Removed block at ${x}, ${y}, ${z}`);
                 } catch (error) {
                     this.logger.error(`Failed to remove block at ${x}, ${y}, ${z}: ${error}`);
                 }

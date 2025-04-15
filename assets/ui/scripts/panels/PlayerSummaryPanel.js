@@ -29,7 +29,7 @@ export default class PlayerSummaryPanel extends BasePanel {
                             <div class="rewards-title">Victory</div>
                             <div class="rewards-list">
                                 <div class="reward-item">
-                                    <div class="reward-icon star-icon"><i class="fa-solid fa-star"></i></div>
+                                    <div class="reward-icon star-icon"><i class="fa-solid fa-coins"></i></div>
                                     <div class="reward-amount">+<span id="coins-earned">35</span></div>
                                 </div>
                                 <div class="reward-item">
@@ -37,8 +37,8 @@ export default class PlayerSummaryPanel extends BasePanel {
                                     <div class="reward-amount">+<span id="xp-earned">3000</span></div>
                                 </div>
                                 <div class="reward-item">
-                                    <div class="reward-icon trophy-icon"><i class="fa-solid fa-trophy"></i></div>
-                                    <div class="reward-amount">+<span id="rounds-played">30</span></div>
+                                    <div class="reward-icon crown-icon"><i class="fa-solid fa-crown"></i></div>
+                                    <div class="reward-amount">+<span id="crowns-small">0</span></div>
                                 </div>
                             </div>
                         </div>
@@ -75,7 +75,7 @@ export default class PlayerSummaryPanel extends BasePanel {
             coinsEarned: this.container.querySelector('#coins-earned'),
             xpEarned: this.container.querySelector('#xp-earned'),
             crownsEarned: this.container.querySelector('#crowns-earned'),
-            roundsPlayed: this.container.querySelector('#rounds-played'),
+            crownsSmall: this.container.querySelector('#crowns-small'),
             totalPlayers: this.container.querySelector('#total-players'),
             roundsPlayedStat: this.container.querySelector('#rounds-played-stat'),
             continueButton: this.container.querySelector('#continue-button'),
@@ -115,28 +115,27 @@ export default class PlayerSummaryPanel extends BasePanel {
         
         // Update rewards
         if (this.elements.coinsEarned) {
-            // Show more coins for higher placement
-            const coinsBase = data.coinsEarned;
+            // Show coins earned
+            const coinsBase = data.coinsEarned || 35;
             this.elements.coinsEarned.textContent = coinsBase;
         }
         
         // Calculate XP (better estimation for display)
         if (this.elements.xpEarned) {
-            const estimatedXP = data.placement === 1 ? 3000 : 
-                               data.placement <= 3 ? 2000 : 
-                               1000 + (11 - data.placement) * 200;
+            const estimatedXP = data.xpEarned || (data.placement === 1 ? 3000 : 
+                                data.placement <= 3 ? 2000 : 
+                                1000 + (11 - data.placement) * 200);
             this.elements.xpEarned.textContent = estimatedXP;
         }
         
-        if (this.elements.crownsEarned) {
-            this.elements.crownsEarned.textContent = data.crownsEarned;
+        // Update small crown display
+        if (this.elements.crownsSmall) {
+            this.elements.crownsSmall.textContent = data.crownsEarned || 0;
         }
         
-        // Update trophy count based on rounds played
-        if (this.elements.roundsPlayed && data.roundsPlayed) {
-            // Add a multiplier to make it look more impressive
-            const trophyScore = data.roundsPlayed * 10;
-            this.elements.roundsPlayed.textContent = trophyScore;
+        // Update large crown display
+        if (this.elements.crownsEarned) {
+            this.elements.crownsEarned.textContent = data.crownsEarned || 0;
         }
         
         // Update stats (both visible and hidden versions)

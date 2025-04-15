@@ -32,7 +32,7 @@ startServer(world => {
 		// GameManager's internal handlePlayerJoin listener will determine initial state (menu/spectator)
 		 
 		// Send welcome message using player ID
-		 world.chatManager.sendBroadcastMessage(`Welcome Player ${player.id} to Fall Guys!`);
+		 world.chatManager.sendBroadcastMessage(`Welcome Player ${player.id} to Hytopia Havoc!`);
 	});
 	
 	// =========================================

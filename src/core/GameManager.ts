@@ -164,7 +164,8 @@ export class GameManager {
 		}
 		
 		// Welcome the player
-		this.world.chatManager.sendPlayerMessage(player, `Welcome to Hytopia! ${player.id}`);
+		const playerName = this.getPlayerName(player.id);
+		this.world.chatManager.sendPlayerMessage(player, `Welcome to Hytopia Havoc, ${playerName}!`);
 	}
 
 	private async handlePlayerLeave(payload: { player: Player }): Promise<void> {
@@ -653,11 +654,10 @@ export class GameManager {
 		}
 	}
 
-	private getPlayerName(playerId: string): string {
+	public getPlayerName(playerId: string): string {
 		// Get player data and return player name if available, otherwise fallback to ID
-		const playerData = this.joinedPlayerData.get(playerId);
-
-		return playerData?.playerName || "PLAYER Name MISSING";
+		const playerData = this.players.get(playerId);
+		return playerData?.username || playerId;
 	}
 
 	private handleLevelRoundEnd(data: { q: string[], e: string[] }): void {

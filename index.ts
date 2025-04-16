@@ -25,14 +25,29 @@ startServer(world => {
 	gameManager.setUIBridge(uiBridge); // Provide GameManager with a reference to UIBridge
 	
 	// 3. Handle Player Join - Initialize UI via UIBridge
-	world.on(PlayerEvent.JOINED_WORLD, ({ player }) => {
-		console.log(`[Server] Player ${player.id} joined. Initializing UI via Bridge.`);
-		uiBridge.initializePlayerUI(player); // UIBridge loads HTML and sets up data listener
+	world.on(PlayerEvent.JOINED_WORLD, async ({ player }) => {
+		console.log(`[Server] Player ${player.id} joined.`);
 		
-		// GameManager's internal handlePlayerJoin listener will determine initial state (menu/spectator)
-		 
-		// Send welcome message using player ID
-		 world.chatManager.sendBroadcastMessage(`Welcome Player ${player.id} to Hytopia Havoc!`);
+		// Let GameManager's handlePlayerJoin execute first to load player data
+		// This happens automatically due to the listener registered in GameManager
+		
+		// Small delay to ensure player data is loaded before initializing UI
+		setTimeout(() => {
+			// Initialize the UI
+			uiBridge.initializePlayerUI(player);
+			
+			// Send welcome message using player name
+			const playerName = gameManager.getPlayerName(player.id);
+			world.chatManager.sendBroadcastMessage(`Welcome ${playerName} to Hytopia Havoc!`);
+			
+			// Force another update of the player's stats after a small delay
+			setTimeout(() => {
+				const playerData = gameManager.getPlayerData(player.id);
+				if (playerData) {
+					uiBridge.updatePlayerStats(player, playerData);
+				}
+			}, 500);
+		}, 100);
 	});
 	
 	// =========================================

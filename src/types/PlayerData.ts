@@ -36,7 +36,9 @@ export class PlayerData {
 		this.player = player;
 		this.playerController = null;
 		this.playerEntity = null;
-		this.playerName = player.id || "Player";
+		
+		// Use player ID, try to get a more friendly name for display
+		this.playerName = player.username || "Player_Name_MISSING";
 		this.playerLevel = 1;
 		this.playerXP = 0;
 		this.coins = 0;
@@ -75,16 +77,17 @@ export class PlayerData {
 	 * Update player data from JSON
 	 */
 	fromJSON(data: PlayerDataJSON): void {
-		this.playerName = data.playerName || this.player.id || "Player";
+		// Preserve username from Player object if available, else use persisted data or ID
+		this.playerName = this.player.username || data.playerName || this.player.id || "Player";
 		this.playerLevel = data.level ?? 1;
 		this.playerXP = data.xp ?? 0;
 		this.coins = data.coins ?? 0;
 		this.crowns = data.crowns ?? 0;
-		this.ownedItemIds = data.ownedItemIds ?? ['head_default', 'body_default', 'legs_default'];
+		this.ownedItemIds = data.ownedItemIds ?? ['head_basic_helmet']; // Default items
 		this.equippedItems = data.equippedItems ?? {
-			head: 'head_default',
-			body: 'body_default',
-			legs: 'legs_default'
+			head: 'head_basic_helmet',
+			body: 'none',
+			legs: 'none'
 		};
 		this.wins = data.wins ?? 0;
 		this.modelUri = data.modelUri ?? "models/players/player.gltf";

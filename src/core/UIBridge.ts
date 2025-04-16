@@ -321,7 +321,8 @@ export class UIBridge {
         this.sendDataToPlayer(player, {
             type: 'PLAYER_DATA_UPDATE',
             playerData: {
-                playerName: playerData.playerName || player.id,
+                // Use username property if available, fallback to playerData.playerName then ID
+                playerName: player.username || playerData.playerName || player.id,
                 level: playerData.playerLevel,
                 xp: playerData.playerXP,
                 coins: playerData.coins,

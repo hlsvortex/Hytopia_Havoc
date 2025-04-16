@@ -22,5 +22,4 @@ Survival Challenges
 - Top Drop: Stand on platforms that disappear shortly after being touched
 - Block Party: Avoid moving blocks coming at you on a platform while space becomes limited
 
-
-![HytopiaHavocLogo](https://github.com/user-attachments/assets/96d4cef2-145b-4a9d-b626-656090e6edac)
+![HytopiaHavocLogo](https://github.com/user-attachments/assets/1f6b25d2-0ecd-46d7-acd1-3578bd272e47)

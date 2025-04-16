@@ -654,8 +654,9 @@ export class GameManager {
 	}
 
 	private getPlayerName(playerId: string): string {
-		// Use player ID as name for now
-		return playerId;
+		// Get player data and return player name if available, otherwise fallback to ID
+		const playerData = this.joinedPlayerData.get(playerId);
+		return playerData?.playerName || playerId;
 	}
 
 	private handleLevelRoundEnd(data: { q: string[], e: string[] }): void {

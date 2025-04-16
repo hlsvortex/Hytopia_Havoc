@@ -23,4 +23,4 @@ Survival Challenges
 - Block Party: Avoid moving blocks coming at you on a platform while space becomes limited
 
 
-![4de006e1-a863-4a61-92d5-6f6b1da653c8](https://github.com/user-attachments/assets/3196e910-74b6-45dc-b1ac-768d1aec8a3c)
+![HytopiaHavocLogo](https://github.com/user-attachments/assets/96d4cef2-145b-4a9d-b626-656090e6edac)

@@ -656,7 +656,8 @@ export class GameManager {
 	private getPlayerName(playerId: string): string {
 		// Get player data and return player name if available, otherwise fallback to ID
 		const playerData = this.joinedPlayerData.get(playerId);
-		return playerData?.playerName || playerId;
+
+		return playerData?.playerName || "PLAYER Name MISSING";
 	}
 
 	private handleLevelRoundEnd(data: { q: string[], e: string[] }): void {
@@ -876,7 +877,7 @@ export class GameManager {
 					
 					// Show the winner screen
 					console.log(`[GameManager] Showing winner screen for ${winnerId}`);
-					this.uiBridge?.broadcastWinner(winnerId);
+					this.uiBridge?.broadcastWinner(this.getPlayerName(winnerId));
 					
 					// Wait longer before showing player summaries
 					setTimeout(() => {

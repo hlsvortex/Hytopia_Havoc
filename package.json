@@ -11,6 +11,9 @@
   "license": "ISC",
   "dependencies": {
     "@hytopia.com/assets": "latest",
-    "hytopia": "^0.3.34"
-  }
+    "hytopia": "^0.4.3"
+  },
+  "trustedDependencies": [
+    "mediasoup"
+  ]
 }

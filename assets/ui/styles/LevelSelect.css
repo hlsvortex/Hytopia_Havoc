@@ -363,27 +363,31 @@
 }
 
 .randomizing-header {
-    background-color: #ff00a6;
+    background-color: #000000;
     padding: 12px 40px;
+    width: 100%;
+    height: 60px;
     border-radius: 18px;
-    margin-bottom: 25px;
-    transform: translateY(-5px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
     position: relative;
     overflow: hidden;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    align-items: center;
+    border: 4px solid rgba(255, 255, 255, 1);
 }
 
 .randomizing-header h1 {
     font-size: 32px;
     margin: 0;
+    margin-top: 10px;
     font-weight: bold;
     letter-spacing: 2px;
+    color: #ff00a6;
     text-shadow: 2px 2px 0 #000;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+
     gap: 12px;
 }
 
@@ -392,7 +396,7 @@
 }
 
 .level-display-randomizing {
-    background-color: #000000;
+    background-color: #00000000;
     border-radius: 18px;
     padding: 20px;
     width: 80%;
@@ -400,8 +404,6 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-    border: 4px solid #ffffff;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
@@ -411,11 +413,11 @@
     width: 100%;
     height: 320px;
     overflow: hidden;
-    border-radius: 12px;
+    border-radius: 10px;
     margin-bottom: 15px;
-    border: 2px solid #ffee00;
+    border: 6px solid #ffffff;
     position: relative;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
 }
 
 .level-display-randomizing .level-image {
@@ -456,9 +458,9 @@
 .level-info-randomizing .level-name {
     font-size: 28px;
     font-weight: bold;
-    color: #ffee00;
+    color: #ffffff;
     margin: 0 0 12px 0;
-    text-shadow: 2px 2px 0 #000;
+    text-shadow: 2px 2px 2px #000;
     position: relative;
     display: flex;
     align-items: center;
@@ -493,24 +495,27 @@
 .selected-details-container {
     width: 90%;
     max-width: 1200px;
-    background-color: rgba(0, 0, 0, 0.9);
+    background-color: rgba(0, 0, 0, 0.0);
     border-radius: 20px;
     padding: 30px;
-    border: 4px solid #ffffffea;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     display: flex;
     flex-direction: column;
     align-items: center;
+    overflow: hidden;
 }
 
 .selected-level-header {
-    width: auto;
+    width: 100%;
+    max-width: 800px;
     background-color: #000000;
     padding: 10px 30px;
-    border-radius: 15px 15px 0 0;
-    margin-bottom: 20px;
-    clip-path: polygon(0 0, 100% 0, calc(100% - 20px) 100%, 20px 100%);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    border-radius: 18px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
+    border: 4px solid rgba(255, 255, 255, 1);
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .selected-level-header .header-level-name {
@@ -518,24 +523,32 @@
     font-weight: bold;
     color: #ff00a6;
     text-shadow: 2px 2px 0 #000;
+    letter-spacing: 2px;
+    margin: 0;
 }
 
 .selected-level-content {
     display: flex;
     width: 100%;
     gap: 30px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .selected-preview-col {
     flex: 2;
-    border: 3px solid #ffee00;
+    min-width: 300px;
+    max-width: 100%;
+    border: 6px solid #ffffff;
     border-radius: 15px;
     overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.5);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     min-height: 300px;
+    height: auto;
 }
 
 .selected-preview-col .selected-level-image {
@@ -546,9 +559,12 @@
 
 .selected-info-col {
     flex: 1;
+    min-width: 300px;
+    max-width: 100%;
     text-align: left;
     display: flex;
     flex-direction: column;
+    gap: 20px;
 }
 
 .level-type-tag-container {
@@ -570,18 +586,25 @@
 .how-to-play-title, .medals-title {
     font-size: 24px;
     font-weight: bold;
-    color: #ffee00;
-    text-shadow: 1px 1px 0 #000;
+    color: #ffffff;
+    text-shadow: 2px 2px 2px #000;
     margin-bottom: 10px;
     text-align: center;
     border-bottom: 2px solid rgba(255, 255, 255, 0.2);
     padding-bottom: 5px;
 }
 
+.description-container {
+    background-color: #000000;
+    border-radius: 15px;
+    padding: 15px 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
+    border: 3px solid rgba(255, 255, 255, 0.7);
+}
+
 .selected-info-col .selected-level-description {
     font-size: 16px;
     line-height: 1.5;
-    margin-bottom: 25px;
     color: #eee;
     text-align: center;
     padding: 0;
@@ -609,6 +632,14 @@
     margin-top: 15px;
     font-weight: bold;
     color: #ffee77;
+}
+
+.medals-section {
+    background-color: #000000;
+    border-radius: 15px;
+    padding: 15px 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
+    border: 3px solid rgba(255, 255, 255, 0.7);
 }
 
 .medals-container {

@@ -30,15 +30,11 @@ export default class LevelSelectPanel extends BasePanel {
                     </div>
                     <div class="level-display-randomizing">
                         <div class="level-image-container">
-                             <div class="level-badge">
-                                <i class="fa-solid fa-trophy"></i>
-                             </div>
                              <img class="level-image" src="">
                         </div>
                         <div class="level-info-randomizing">
-                             <h2 class="level-name"><i class="fa-solid fa-medal"></i> <span class="name-text"></span></h2>
-                             <p class="level-description"><i class="fa-solid fa-lightbulb"></i> <span class="description-text"></span></p>
-                        </div>
+                             <h2 class="level-name"><span class="name-text"></span></h2>
+                       </div>
                     </div>
                 </div>
 
@@ -49,31 +45,34 @@ export default class LevelSelectPanel extends BasePanel {
                     </div>
                     <div class="selected-level-content">
                         <div class="selected-preview-col">
-                             <img class="selected-level-image" src="">
+                             <img class="selected-level-image" src="" alt="Level">
                         </div>
                         <div class="selected-info-col">
                             <div class="level-type-tag-container">
                                 <span class="level-type-tag">RACE</span>
                             </div>
-                            <h3 class="how-to-play-title">HOW TO PLAY</h3>
-                            <p class="selected-level-description">Navigate the obstacles and race to the finish line!</p>
-                            
-                            <h4 class="medals-title">MEDALS</h4>
-                            <div class="medals-container">
-                                <div class="medal-item gold">
-                                    <div class="medal-header">Gold</div>
-                                    <div class="medal-icon"><i class="fa-solid fa-medal"></i></div>
-                                    <div class="medal-req">Place 1st</div>
-                                </div>
-                                <div class="medal-item silver">
-                                     <div class="medal-header">Silver</div>
-                                     <div class="medal-icon"><i class="fa-solid fa-medal"></i></div>
-                                     <div class="medal-req">Place Top 20%</div>
-                                </div>
-                                <div class="medal-item bronze">
-                                     <div class="medal-header">Bronze</div>
-                                     <div class="medal-icon"><i class="fa-solid fa-medal"></i></div>
-                                     <div class="medal-req">Place Top 50%</div>
+                            <div class="description-container">
+                                <h3 class="how-to-play-title">HOW TO PLAY</h3>
+                                <p class="selected-level-description">Navigate the obstacles and race to the finish line!</p>
+                            </div>
+                            <div class="medals-section">
+                                <h4 class="medals-title">MEDALS</h4>
+                                <div class="medals-container">
+                                    <div class="medal-item gold">
+                                        <div class="medal-header">Gold</div>
+                                        <div class="medal-icon"><i class="fa-solid fa-medal"></i></div>
+                                        <div class="medal-req">Place 1st</div>
+                                    </div>
+                                    <div class="medal-item silver">
+                                         <div class="medal-header">Silver</div>
+                                         <div class="medal-icon"><i class="fa-solid fa-medal"></i></div>
+                                         <div class="medal-req">Place Top 20%</div>
+                                    </div>
+                                    <div class="medal-item bronze">
+                                         <div class="medal-header">Bronze</div>
+                                         <div class="medal-icon"><i class="fa-solid fa-medal"></i></div>
+                                         <div class="medal-req">Place Top 50%</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

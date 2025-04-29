@@ -144,8 +144,12 @@
     left: 50%;
     top: 50%;
     transform: translate(-50%, -40%);
-    width: 300px;
-    height: 400px;
+    width: 35vmin;
+    height: 45vmin;
+    min-width: 250px;
+    min-height: 350px;
+    max-width: 400px;
+    max-height: 500px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -170,7 +174,7 @@
 }
 
 .player-name {
-    font-size: 24px;
+    font-size: clamp(18px, 3vmin, 28px);
     font-weight: bold;
     color: white;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 10px rgba(255, 66, 161, 0.9);
@@ -179,7 +183,8 @@
     padding: 5px 15px;
     text-transform: uppercase;
     text-align: center;
-    max-width: 520px;
+    max-width: 100%;
+    width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -205,9 +210,9 @@
 .season-progress-container {
     position: absolute;
 	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-    bottom: 20px;
-    left: 20px;
-    width: 320px;
+    bottom: 30px;
+    left: 2vw;
+    width: clamp(350px, 25vw, 450px);
     background-color: rgba(0, 0, 0, 0.8);
 	border: 3px solid rgba(255, 255, 255, 0.9);
 	border-radius: 15px;
@@ -215,7 +220,7 @@
 }
 
 .season-label {
-    font-size: 14px;
+    font-size: clamp(14px, 3vmin, 20px);
     text-transform: uppercase;
     color: #ff5eae;
     font-weight: bold;
@@ -238,7 +243,7 @@
     border-radius: 50%;
     display: flex;
     justify-content: center;
-    font-size: 20px;
+    font-size: clamp(20px, 3vmin, 25px);
     font-weight: bold;
     box-shadow: 0 0 10px rgba(255, 94, 174, 0.7);
     transform: translateZ(0);
@@ -301,7 +306,7 @@
 }
 
 .xp-text {
-    font-size: 15px;
+    font-size: clamp(15px, 3vmin, 25px);
     font-weight: 700;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
     text-align: left;
@@ -318,14 +323,13 @@
     color: #ffee77;
 }
 
-/* Show Selector */
+/* Show selector at bottom right */
 .show-selector-container {
     position: absolute;
-    bottom: 20px;
-    right: 20px;
+    bottom: 40px;
+    right: 3vw;
     display: flex;
     flex-direction: column;
-    gap: 10px;
     align-items: flex-end;
 }
 
@@ -378,20 +382,17 @@
     to { opacity: 1; }
 }
 
-/* Player List */
+/* Player List Section */
 .player-list-container {
     position: absolute;
-    right: 20px;
-    top: 90px;
-    width: 250px;
-    max-height: 400px;
-    background-color: rgba(0, 0, 0, 0.7);
-    border-radius: 15px;
-    border: 3px solid rgba(255, 255, 255, 0.9);
+    right: 2vw;
+    top: 100px;
+    width: clamp(250px, 25vw, 350px);
+    background-color: rgba(0, 0, 0, 0.8);
+    border-radius: 12px;
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+    border: 2px solid rgb(255, 255, 255);
 }
 
 .player-list-header {
@@ -402,7 +403,7 @@
 
 .player-list-title {
     color: #ff5eae;
-    font-size: 16px;
+    font-size: clamp(16px, 3vmin, 20px);
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -433,7 +434,7 @@
 .player-entry-name {
     color: white;
     font-weight: bold;
-    font-size: 14px;
+    font-size: clamp(14px, 3vmin, 20px);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -449,7 +450,7 @@
 
 .level-text {
     color: #ffffff;
-    font-size: 11px;
+    font-size: clamp(11px, 3vmin, 16px);
     opacity: 0.8;
 }
 
@@ -462,7 +463,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 12px;
+    font-size: clamp(12px, 3vmin, 16px);
     font-weight: bold;
     box-shadow: 0 0 8px rgba(255, 94, 174, 0.5);
 }
@@ -532,11 +533,12 @@
     flex-direction: column;
     align-items: flex-end;
     margin-top: 15px;
+    width: 100%;
 }
 
 .play-button {
-    width: 250px;
-    height: 80px;
+    width: clamp(260px, 15vw, 470px);
+    height: clamp(90px, 10vh, 140px);
     background: linear-gradient(135deg, #ffbc36 0%, #ff7336 100%);
     border: none;
     border-radius: 12px;
@@ -570,7 +572,7 @@
 }
 
 .play-text {
-    font-size: 28px;
+    font-size: clamp(32px, 3vmin, 64px);
     font-weight: 800;
     color: white;
     text-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
@@ -594,17 +596,24 @@
         font-size: 18px;
     }
     
-    .season-progress-container {
-        width: 260px;
+    .currency-container {
+        gap: 5px;
     }
     
-    .play-button {
-        width: 160px;
-        height: 60px;
+    .currency {
+        padding: 4px 10px;
     }
     
-    .play-text {
-        font-size: 20px;
+    .currency-amount {
+        font-size: 16px;
+    }
+    
+    .player-list-container {
+        top: 80px;
+    }
+    
+    .player-list {
+        max-height: 250px;
     }
 }
 

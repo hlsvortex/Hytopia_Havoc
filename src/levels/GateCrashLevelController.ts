@@ -180,7 +180,7 @@ export class GateCrashLevelController extends CourseLevelController {
             finalOptions.size = size;
         }
         
-        const wall = new CrashWallObstacle(finalOptions, this);
+        const wall = new CrashWallObstacle(finalOptions, this, this.world);
         wall.spawn(this.world, position);
         this.obstacles.push(wall);
         

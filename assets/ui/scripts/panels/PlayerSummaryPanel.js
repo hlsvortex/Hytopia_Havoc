@@ -25,30 +25,32 @@ export default class PlayerSummaryPanel extends BasePanel {
                     
                     <!-- Rewards on the right -->
                     <div class="rewards-section">
-                        <div class="main-rewards-card">
-                            <div class="rewards-title">Victory</div>
-                            <div class="rewards-list">
-                                <div class="reward-item">
-                                    <div class="reward-icon star-icon"><i class="fa-solid fa-coins"></i></div>
-                                    <div class="reward-amount">+<span id="coins-earned">35</span></div>
+                        <div class="rewards-row">
+                            <div class="main-rewards-card">
+                                <div class="rewards-title">Victory</div>
+                                <div class="rewards-list">
+                                    <div class="reward-item">
+                                        <div class="reward-icon star-icon"><i class="fa-solid fa-coins"></i></div>
+                                        <div class="reward-amount">+<span id="coins-earned">35</span></div>
+                                    </div>
+                                    <div class="reward-item">
+                                        <div class="reward-icon xp-icon"><i class="fa-solid fa-bolt"></i></div>
+                                        <div class="reward-amount">+<span id="xp-earned">3000</span></div>
+                                    </div>
                                 </div>
-                                <div class="reward-item">
-                                    <div class="reward-icon xp-icon"><i class="fa-solid fa-bolt"></i></div>
-                                    <div class="reward-amount">+<span id="xp-earned">3000</span></div>
-                                </div>
-                                <div class="reward-item">
-                                    <div class="reward-icon crown-icon"><i class="fa-solid fa-crown"></i></div>
-                                    <div class="reward-amount">+<span id="crowns-small">0</span></div>
-                                </div>
+                            </div>
+                            
+                            <div class="crown-card">
+                                <div class="crown-icon"><i class="fa-solid fa-crown"></i></div>
+                                <div class="crown-amount">+<span id="crowns-earned">1</span></div>
                             </div>
                         </div>
                         
-                        <div class="crown-card">
-                            <div class="crown-icon"><i class="fa-solid fa-crown"></i></div>
-                            <div class="crown-amount">+<span id="crowns-earned">1</span></div>
+                        <div class="button-container">
+                            <button id="continue-button" class="continue-button play-button">
+                                <div class="play-text">Claim</div>
+                            </button>
                         </div>
-                        
-                        <button id="continue-button" class="continue-button">Claim</button>
                     </div>
                     
                     <!-- Hidden div that still stores the original data -->

@@ -185,7 +185,7 @@ export class BounceRushLevelController extends CourseLevelController {
 			moveDistance: moveDistance,
 			moveSpeed: moveSpeed,
 			movementAxis: moveAxis
-		}, this);
+		}, this, this.world);
 
 		bouncePad.spawn(this.world, position);
 		this.bouncePads.push(bouncePad);
